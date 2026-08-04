@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PROJECT_MANAGER
+  DEVELOPER
+  ACCOUNTS
+  OPERATIONS
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ServerStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  DECOMMISSIONED
+}
+
+model User {
+  id        String      @id @default(uuid())
+  email     String      @unique
+  password  String
+  name      String
+  role      Role        @default(DEVELOPER)
+  avatar    String?
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  auditLogs AuditLog[]
+  loginLogs LoginLog[]
+  shortUrls ShortUrl[]
+  qrCodes   QrCode[]
+}
+
+model Client {
+  id            String       @id @default(uuid())
+  name          String
+  company       String
+  contactPerson String
+  email         String
+  phone         String?
+  address       String?
+  status        ClientStatus @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  projects      Project[]
+  domains       Domain[]
+  servers       Server[]
+  shortUrls     ShortUrl[]
+  qrCodes       QrCode[]
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  technology  String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      ProjectStatus @default(PLANNING)
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  managerId   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  billing     Billing[]
+  assets      Asset?
+  credentials Credential[]
+  shortUrls   ShortUrl[]
+  qrCodes     QrCode[]
+  servers        Server[]
+  domains        Domain[]
+  financeRecords FinanceRecord[]
+}
+
+model Billing {
+  id            String        @id @default(uuid())
+  projectId     String
+  project       Project       @relation(fields: [projectId], references: [id])
+  billingType   String
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("USD")
+  dueDate       DateTime?
+  paymentStatus PaymentStatus @default(PENDING)
+  invoiceNumber String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Asset {
+  id            String   @id @default(uuid())
+  projectId     String   @unique
+  project       Project  @relation(fields: [projectId], references: [id])
+  gitRepo       String?
+  productionUrl String?
+  stagingUrl    String?
+  documentation String?
+  database      String?
+  apiCollection String?
+  designFiles   String?
+  customAssets  Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Credential {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  portalName    String
+  username      String
+  password      String
+  notes         String?
+  assetCategory String?
+  loginUrl      String?
+  minRoleAccess String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Server {
+  id              String       @id @default(uuid())
+  name            String
+  provider        String
+  ipAddress       String?
+  purchaseDate    DateTime?
+  expiryDate      DateTime?
+  renewalCost     Decimal?     @db.Decimal(10, 2)
+  renewalFrequency String?
+  status          ServerStatus @default(ACTIVE)
+  clientId        String?
+  client          Client?      @relation(fields: [clientId], references: [id])
+  projectId       String?
+  project         Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Domain {
+  id             String    @id @default(uuid())
+  domain         String
+  registrar      String?
+  purchaseDate   DateTime?
+  expirationDate DateTime?
+  sslExpiration  DateTime?
+  renewalCost    Decimal?  @db.Decimal(10, 2)
+  dnsProvider    String?
+  autoRenewal    Boolean   @default(false)
+  clientId       String?
+  client         Client?   @relation(fields: [clientId], references: [id])
+  projectId      String?
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  shortUrls      ShortUrl[]
+}
+
+model ShortUrl {
+  id           String     @id @default(uuid())
+  originalUrl  String
+  shortCode    String     @unique
+  alias        String?
+  expiryDate   DateTime?
+  clickCount   Int        @default(0)
+  clientId     String?
+  client       Client?    @relation(fields: [clientId], references: [id])
+  projectId    String?
+  project      Project?   @relation(fields: [projectId], references: [id])
+  category     String?
+  domainId     String?
+  domain       Domain?    @relation(fields: [domainId], references: [id])
+  passwordHash String?
+  maxClicks    Int?
+  redirectType String     @default("302")
+  status       String     @default("ACTIVE")
+  tags         String?
+  notes        String?
+  createdBy    String?
+  creator      User?      @relation(fields: [createdBy], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  clicks       ClickLog[]
+  qrCodes      QrCode[]
+}
+
+model ClickLog {
+  id        String   @id @default(uuid())
+  urlId     String
+  url       ShortUrl @relation(fields: [urlId], references: [id])
+  ip        String?
+  userAgent String?
+  referer   String?
+  clickedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
+model QrCode {
+  id                   String    @id @default(uuid())
+  name                 String
+  type                 String    @default("URL") // URL, TEXT, EMAIL, PHONE, SMS, WIFI, VCARD
+  content              String    @db.Text
+  rawContent           Json?
+  clientId             String?
+  client               Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId            String?
+  project              Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  shortUrlId           String?
+  shortUrl             ShortUrl? @relation(fields: [shortUrlId], references: [id], onDelete: SetNull)
+  format               String    @default("SVG") // SVG, PNG
+  size                 Int       @default(256)
+  foregroundColor      String    @default("#000000")
+  backgroundColor      String    @default("#FFFFFF")
+  errorCorrectionLevel String    @default("M") // L, M, Q, H
+  expiryDate           DateTime?
+  status               String    @default("ACTIVE") // ACTIVE, ARCHIVED, EXPIRED
+  tags                 String?
+  createdBy            String?
+  creator              User?     @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String
+  title     String
+  message   String
+  entityId  String?
+  entityType String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model LoginLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  email     String
+  success   Boolean
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model AssetPlatform {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FinanceRecord {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String   // INVOICE, RECEIPT, QUOTATION, CONTRACT, EXPENSE
+  title     String
+  amount    Decimal  @db.Decimal(10, 2)
+  currency  String   @default("USD")
+  status    String   @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED, DRAFT
+  dueDate   DateTime?
+  paidDate  DateTime?
+  fileUrl   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

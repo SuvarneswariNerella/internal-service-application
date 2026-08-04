@@ -1,6 +1,0 @@
-{
-  "name": "Expinova Admin Panel",
-  "description": "Expense Management SaaS Platform Reports Module",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
