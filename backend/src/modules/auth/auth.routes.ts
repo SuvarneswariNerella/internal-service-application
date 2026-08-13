@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register, login, refreshToken, me } from "./auth.controller";
+import { register, login, refreshToken, me, generateTotp, verifyTotp } from "./auth.controller";
 import { authenticate } from "@/middleware/auth";
 import { validate } from "@/middleware/validate";
 import { loginSchema, registerSchema, refreshTokenSchema } from "./auth.validation";
@@ -33,6 +33,22 @@ router.post("/refresh", validate(refreshTokenSchema), async (req, res, next) => 
 router.get("/me", authenticate, async (req, res, next) => {
   try {
     await me(req, res);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/totp/generate", authenticate, async (req, res, next) => {
+  try {
+    await generateTotp(req, res);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/totp/verify", authenticate, async (req, res, next) => {
+  try {
+    await verifyTotp(req, res);
   } catch (err) {
     next(err);
   }

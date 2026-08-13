@@ -19,6 +19,8 @@ export interface Project {
     contactPerson?: string;
     email?: string;
     phone?: string;
+    address?: string;
+    notes?: string;
   };
   assets?: Asset;
   credentials?: Credential[];
@@ -71,7 +73,7 @@ export interface Billing {
 }
 
 export const projectsApi = {
-  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string; clientId?: string }) =>
+  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string; clientId?: string; workspaceId?: string }) =>
     api.get<ApiResponse<Project[]>>("/projects", { params }),
 
   get: (id: string) => api.get<ApiResponse<Project>>(`/projects/${id}`),

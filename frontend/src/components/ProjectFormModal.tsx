@@ -13,6 +13,7 @@ import {
 import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
 import { useToastStore } from "@/store/toastStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 const STATUS_OPTIONS = [
   { value: "PLANNING", label: "Planning" },
@@ -86,6 +87,7 @@ export default function ProjectFormModal({
 }: ProjectFormModalProps) {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [clientFetchError, setClientFetchError] = useState(false);
@@ -109,7 +111,7 @@ export default function ProjectFormModal({
       setIsLoadingClients(true);
       setClientFetchError(false);
       clientsApi
-        .getOptions()
+        .getOptions({ workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId })
         .then((res) => {
           const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
           if (Array.isArray(list)) {
@@ -120,7 +122,10 @@ export default function ProjectFormModal({
         })
         .catch((err) => {
           console.error("Failed to fetch client options for project modal, trying list:", err);
-          return clientsApi.list({ pageSize: 1000 }).then((res) => {
+          return clientsApi.list({ 
+            pageSize: 1000,
+            workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+          }).then((res) => {
             const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
             if (Array.isArray(list)) {
               setClients(list as Client[]);
@@ -199,6 +204,7 @@ export default function ProjectFormModal({
         description: form.description,
         startDate: form.startDate || undefined,
         endDate: form.endDate || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
       };
 
       if (isEdit && project?.id) {

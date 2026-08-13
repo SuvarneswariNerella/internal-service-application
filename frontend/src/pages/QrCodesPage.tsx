@@ -20,6 +20,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import StatusPill from "@/components/ui/StatusPill";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import QrCodeFormModal from "@/components/QrCodeFormModal";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useToastStore } from "@/store/toastStore";
 import { qrCodesApi, type QrCodeItem } from "@/api/qrCodes";
 import { clientsApi, type Client } from "@/api/clients";
@@ -47,11 +48,12 @@ export default function QrCodesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientIdParam = searchParams.get("clientId") || "";
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
 
   const [codes, setCodes] = useState<QrCodeItem[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState(clientIdParam);
-  const [selectedType, setSelectedType] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -67,14 +69,17 @@ export default function QrCodesPage() {
   // Load clients options
   useEffect(() => {
     clientsApi
-      .list({ pageSize: 1000 })
+      .list({ 
+        pageSize: 100,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+      })
       .then((res) => {
-        if (res.data?.data) {
+        if (res.data.success && res.data.data) {
           setClients(res.data.data);
         }
       })
       .catch(console.error);
-  }, []);
+  }, [globalWorkspaceId]);
 
   useEffect(() => {
     setSelectedClientId(clientIdParam);
@@ -91,7 +96,7 @@ export default function QrCodesPage() {
 
   useEffect(() => {
     fetchCodes();
-  }, [search, selectedClientId, selectedType, selectedStatus]);
+  }, [search, selectedClientId, selectedType, selectedStatus, globalWorkspaceId]);
 
   const fetchCodes = async () => {
     setIsLoading(true);
@@ -101,6 +106,7 @@ export default function QrCodesPage() {
         clientId: selectedClientId || undefined,
         type: selectedType || undefined,
         status: selectedStatus || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
         pageSize: 100,
       });
       if (res.data?.data) {
@@ -173,15 +179,11 @@ export default function QrCodesPage() {
       <PageHeader
         title="QR Codes"
         description="Generate, customize, and manage dynamic QR codes across clients and projects"
+        icon={<QrCode className="w-5 h-5" />}
         action={
-          <Button
-            onClick={() => {
-              setEditingQr(null);
-              setIsAddOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New QR Code
+          <Button onClick={() => { setEditingQr(null); setIsAddOpen(true); }} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Plus className="w-4 h-4" />
+            Add New QR Code
           </Button>
         }
       />
@@ -274,16 +276,8 @@ export default function QrCodesPage() {
               <p className="text-gray-400 text-xs mb-4">
                 {search || selectedClientId || selectedType || selectedStatus
                   ? "Try clearing filters to view all records"
-                  : "Generate your first QR code to get started"}
+                  : "No QR codes available"}
               </p>
-              <Button
-                onClick={() => {
-                  setEditingQr(null);
-                  setIsAddOpen(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-2" /> New QR Code
-              </Button>
             </div>
           </CardContent>
         </Card>

@@ -5,6 +5,7 @@ export interface Client {
   id: string;
   name: string;
   company: string;
+  workspaceId?: string;
   contactPerson: string;
   email: string;
   phone?: string;
@@ -17,6 +18,8 @@ export interface Client {
   technologies?: string[];
   daysUntilRenewal?: number | null;
   totalBilling?: number;
+  retainer?: number;
+  accountManagerLead?: string;
   assetCount?: number;
   activeServices?: number;
   projects?: Project[];
@@ -63,11 +66,11 @@ export interface ClientListResponse {
 }
 
 export const clientsApi = {
-  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string }) =>
+  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string; workspaceId?: string }) =>
     api.get<ApiResponse<Client[]>>("/clients", { params }),
 
-  getOptions: () =>
-    api.get<ApiResponse<{ id: string; name: string; company?: string }[]>>("/clients/options"),
+  getOptions: (params?: { workspaceId?: string }) =>
+    api.get<ApiResponse<{ id: string; name: string; company?: string }[]>>("/clients/options", { params }),
 
   get: (id: string) => api.get<ApiResponse<Client>>(`/clients/${id}`),
 

@@ -71,7 +71,7 @@ export function buildQrEncodedString(type: string, content?: string, rawContent?
   }
 }
 
-async function renderQrData(
+export async function renderQrData(
   encodedContent: string,
   format: string,
   size: number,
@@ -151,6 +151,7 @@ export async function generateQrCode(req: Request, res: Response, next: NextFunc
       expiryDate,
       status = "ACTIVE",
       tags,
+      workspaceId,
       saveToLibrary = true,
     } = req.body;
 
@@ -188,6 +189,7 @@ export async function generateQrCode(req: Request, res: Response, next: NextFunc
             expiryDate: expiryDate ? new Date(expiryDate) : null,
             status,
             tags: tags || null,
+            workspaceId: workspaceId || null,
           },
           include: {
             client: { select: { id: true, name: true, company: true } },
@@ -202,8 +204,8 @@ export async function generateQrCode(req: Request, res: Response, next: NextFunc
         const expDateVal = expiryDate ? new Date(expiryDate).toISOString().slice(0, 19).replace("T", " ") : null;
 
         await prisma.$executeRawUnsafe(
-          `INSERT INTO QrCode (id, name, type, content, rawContent, clientId, projectId, shortUrlId, format, size, foregroundColor, backgroundColor, errorCorrectionLevel, expiryDate, status, tags, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
+          `INSERT INTO QrCode (id, name, type, content, rawContent, clientId, projectId, shortUrlId, workspaceId, format, size, foregroundColor, backgroundColor, errorCorrectionLevel, expiryDate, status, tags, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
           newId,
           name,
           type,
@@ -212,6 +214,7 @@ export async function generateQrCode(req: Request, res: Response, next: NextFunc
           clientId || null,
           projectId || null,
           shortUrlId || null,
+          workspaceId || null,
           format,
           Number(size),
           fg,
@@ -280,6 +283,7 @@ export async function updateQrCode(req: Request, res: Response, next: NextFuncti
       expiryDate,
       status,
       tags,
+      workspaceId,
     } = req.body;
 
     const newType = type || existing.type;
@@ -311,6 +315,7 @@ export async function updateQrCode(req: Request, res: Response, next: NextFuncti
           expiryDate: expiryDate !== undefined ? (expiryDate ? new Date(expiryDate) : null) : (existing as any).expiryDate,
           status: status || (existing as any).status || "ACTIVE",
           tags: tags !== undefined ? tags : (existing as any).tags,
+          workspaceId: workspaceId !== undefined ? (workspaceId || null) : (existing as any).workspaceId,
         },
         include: {
           client: { select: { id: true, name: true, company: true } },
@@ -325,7 +330,7 @@ export async function updateQrCode(req: Request, res: Response, next: NextFuncti
 
       await prisma.$executeRawUnsafe(
         `UPDATE QrCode SET
-          name = ?, type = ?, content = ?, rawContent = ?, clientId = ?, projectId = ?, shortUrlId = ?,
+          name = ?, type = ?, content = ?, rawContent = ?, clientId = ?, projectId = ?, shortUrlId = ?, workspaceId = ?,
           format = ?, size = ?, foregroundColor = ?, backgroundColor = ?, errorCorrectionLevel = ?,
           expiryDate = ?, status = ?, tags = ?, updatedAt = NOW(3)
          WHERE id = ?`,
@@ -336,6 +341,7 @@ export async function updateQrCode(req: Request, res: Response, next: NextFuncti
         clientId !== undefined ? (clientId || null) : (existing as any).clientId,
         projectId !== undefined ? (projectId || null) : (existing as any).projectId,
         shortUrlId !== undefined ? (shortUrlId || null) : (existing as any).shortUrlId,
+        workspaceId !== undefined ? (workspaceId || null) : (existing as any).workspaceId,
         newFormat,
         newSize,
         fg,
@@ -377,7 +383,7 @@ export async function updateQrCode(req: Request, res: Response, next: NextFuncti
 
 export async function listQrCodes(req: Request, res: Response, next: NextFunction) {
   try {
-    const { page = 1, pageSize = 50, search, clientId, projectId, type, status } = req.query as any;
+    const { page = 1, pageSize = 50, search, clientId, projectId, workspaceId, type, status } = req.query as any;
 
     const where: any = {};
     if (search) {
@@ -389,6 +395,7 @@ export async function listQrCodes(req: Request, res: Response, next: NextFunctio
     }
     if (clientId) where.clientId = clientId;
     if (projectId) where.projectId = projectId;
+    if (workspaceId) where.workspaceId = workspaceId;
     if (type) where.type = type;
     if (status) where.status = status;
 
@@ -490,6 +497,46 @@ export async function deleteQrCode(req: Request, res: Response, next: NextFuncti
     const id = req.params.id as string;
     await prisma.$executeRawUnsafe(`DELETE FROM QrCode WHERE id = ?`, id);
     return res.json({ success: true, message: "QR code deleted" });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function downloadQrCode(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = req.params.id as string;
+    const { format = "PNG", color = "#000000", size = "1024" } = req.query;
+
+    let qr: any = null;
+    try {
+      qr = await (prisma as any).qrCode.findUnique({
+        where: { id },
+      });
+    } catch {
+      const rows: any = await prisma.$queryRawUnsafe(`SELECT * FROM QrCode WHERE id = ? LIMIT 1`, id);
+      qr = rows?.[0] || null;
+    }
+
+    if (!qr) return res.status(404).json({ error: "QR code not found" });
+
+    const qrOptions = {
+      width: Number(size),
+      margin: 2,
+      color: { dark: color as string, light: "#FFFFFF" },
+      errorCorrectionLevel: (qr.errorCorrectionLevel || "M") as any,
+    };
+
+    if (format === "SVG") {
+      const svgString = await QRCode.toString(qr.content, { ...qrOptions, type: "svg" });
+      res.setHeader("Content-Type", "image/svg+xml");
+      res.setHeader("Content-Disposition", `attachment; filename="qrcode-${id}.svg"`);
+      return res.send(svgString);
+    } else {
+      const buffer = await QRCode.toBuffer(qr.content, qrOptions);
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Content-Disposition", `attachment; filename="qrcode-${id}.png"`);
+      return res.send(buffer);
+    }
   } catch (error) {
     return next(error);
   }

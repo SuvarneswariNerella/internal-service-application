@@ -26,6 +26,7 @@ import { serversApi, type Server as ServerType } from "@/api/servers";
 import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
 import type { PaginationMeta } from "@/types";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/utils/cn";
 
@@ -239,11 +240,15 @@ export default function ServersPage() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [editingServer, setEditingServer] = useState<ServerType | null>(null);
 
   useEffect(() => {
     clientsApi
-      .list({ pageSize: 100 })
+      .list({ 
+        pageSize: 100,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId 
+      })
       .then((res) => {
         if (res.data.success && res.data.data) {
           setClients(res.data.data);
@@ -252,14 +257,17 @@ export default function ServersPage() {
       .catch(console.error);
 
     projectsApi
-      .list({ pageSize: 1000 })
+      .list({ 
+        pageSize: 1000,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+      })
       .then((res) => {
         if (res.data.success && res.data.data) {
           setProjects(res.data.data);
         }
       })
       .catch(console.error);
-  }, []);
+  }, [globalWorkspaceId]);
 
   useEffect(() => {
     setSelectedClientId(clientIdParam);
@@ -301,6 +309,7 @@ export default function ServersPage() {
         status: statusFilter,
         clientId: selectedClientId || undefined,
         projectId: selectedProjectId || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
       });
       if (res.data.success && res.data.data) {
         setServers(res.data.data);
@@ -315,7 +324,7 @@ export default function ServersPage() {
 
   useEffect(() => {
     fetchServers();
-  }, [page, search, statusFilter, selectedClientId, selectedProjectId]);
+  }, [page, search, statusFilter, selectedClientId, selectedProjectId, globalWorkspaceId]);
 
   const selectedProjectObj = projects.find((p) => p.id === selectedProjectId);
   const selectedClientObj = clients.find((c) => c.id === selectedClientId);
@@ -335,6 +344,7 @@ export default function ServersPage() {
       <PageHeader
         title="Servers"
         description="Manage your infrastructure servers across all clients and application services"
+        icon={<Server className="w-5 h-5" />}
         action={
           <Button onClick={() => setIsAddOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />

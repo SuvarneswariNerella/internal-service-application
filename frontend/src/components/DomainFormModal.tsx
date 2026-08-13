@@ -14,6 +14,7 @@ import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
 import { domainsApi, type Domain } from "@/api/domains";
 import { useToastStore } from "@/store/toastStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 function FormField({
   label,
@@ -78,6 +79,7 @@ export default function DomainFormModal({
   onSuccess,
 }: DomainFormModalProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -101,7 +103,10 @@ export default function DomainFormModal({
   useEffect(() => {
     if (isOpen) {
       clientsApi
-        .list({ pageSize: 100 })
+        .list({ 
+          pageSize: 1000,
+          workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+        })
         .then((res) => {
           if (res.data?.success && res.data?.data) {
             setClients(res.data.data);
@@ -160,7 +165,10 @@ export default function DomainFormModal({
         .catch((err) => console.error("Failed to fetch projects for selected client:", err));
     } else {
       projectsApi
-        .list({ pageSize: 1000 })
+        .list({ 
+          pageSize: 1000,
+          workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+        })
         .then((res) => {
           if (res.data?.success && res.data?.data) {
             setProjects(res.data.data);
@@ -225,6 +233,7 @@ export default function DomainFormModal({
         dnsProvider: form.dnsProvider || undefined,
         clientId: form.clientId || undefined,
         projectId: form.projectId || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
         purchaseDate: form.purchaseDate || undefined,
         expirationDate: form.expirationDate || undefined,
         sslExpiration: form.sslExpiration || undefined,

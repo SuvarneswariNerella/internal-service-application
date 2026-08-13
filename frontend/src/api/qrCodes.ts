@@ -34,6 +34,7 @@ export interface QrCodeListParams {
   projectId?: string;
   type?: string;
   status?: string;
+  workspaceId?: string;
 }
 
 export const qrCodesApi = {
@@ -63,6 +64,9 @@ export const qrCodesApi = {
 
   generate: (data: any) =>
     api.post<ApiResponse<QrCodeItem>>("/qrcodes/generate", data),
+
+  download: (id: string, params?: { format?: string; color?: string; size?: number }) =>
+    api.get(`/qrcodes/${id}/download`, { params, responseType: "blob" }),
 
   delete: (id: string) =>
     api.delete(`/qrcodes/${id}`),

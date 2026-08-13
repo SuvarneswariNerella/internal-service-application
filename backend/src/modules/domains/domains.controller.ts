@@ -9,6 +9,7 @@ export async function listDomains(req: Request, res: Response): Promise<void> {
   const search = String(req.query.search || "");
   const clientId = String(req.query.clientId || "");
   const projectId = String(req.query.projectId || "");
+  const workspaceId = String(req.query.workspaceId || "");
 
   const where: Record<string, unknown> = {};
   if (search) {
@@ -20,6 +21,7 @@ export async function listDomains(req: Request, res: Response): Promise<void> {
   }
   if (clientId) where.clientId = clientId;
   if (projectId) where.projectId = projectId;
+  if (workspaceId) where.workspaceId = workspaceId;
 
   const [domains, total] = await Promise.all([
     prisma.domain.findMany({
@@ -78,6 +80,7 @@ export async function createDomain(req: Request, res: Response): Promise<void> {
       autoRenewal: req.body.autoRenewal || false,
       clientId: req.body.clientId || null,
       projectId: req.body.projectId || null,
+      workspaceId: req.body.workspaceId || null,
     },
     include: {
       client: { select: { id: true, name: true } },
@@ -117,6 +120,7 @@ export async function updateDomain(req: Request, res: Response): Promise<void> {
   if (req.body.autoRenewal !== undefined) updateData.autoRenewal = req.body.autoRenewal;
   if (req.body.clientId !== undefined) updateData.clientId = req.body.clientId || null;
   if (req.body.projectId !== undefined) updateData.projectId = req.body.projectId || null;
+  if (req.body.workspaceId !== undefined) updateData.workspaceId = req.body.workspaceId || null;
 
   const updated = await prisma.domain.update({
     where: { id },
@@ -156,17 +160,24 @@ export async function deleteDomain(req: Request, res: Response): Promise<void> {
   res.json({ success: true, data: { message: "Domain deleted" } });
 }
 
-export async function getExpiringDomains(_req: Request, res: Response): Promise<void> {
+export async function getExpiringDomains(req: Request, res: Response): Promise<void> {
   const now = new Date();
   const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const { workspaceId } = req.query;
+
+  const where: any = {
+    OR: [
+      { expirationDate: { not: null, lte: thirtyDays, gte: now } },
+      { sslExpiration: { not: null, lte: thirtyDays, gte: now } },
+    ],
+  };
+
+  if (workspaceId && typeof workspaceId === "string") {
+    where.workspaceId = workspaceId;
+  }
 
   const domains = await prisma.domain.findMany({
-    where: {
-      OR: [
-        { expirationDate: { not: null, lte: thirtyDays, gte: now } },
-        { sslExpiration: { not: null, lte: thirtyDays, gte: now } },
-      ],
-    },
+    where,
     orderBy: { expirationDate: "asc" },
     include: {
       client: { select: { id: true, name: true } },

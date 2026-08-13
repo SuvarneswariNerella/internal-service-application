@@ -11,6 +11,7 @@ export const createServerSchema = z.object({
   status: z.enum(["ACTIVE", "EXPIRING_SOON", "EXPIRED", "DECOMMISSIONED"]).optional(),
   clientId: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  workspaceId: z.string().optional().nullable(),
 });
 
 export const updateServerSchema = z.object({
@@ -24,4 +25,5 @@ export const updateServerSchema = z.object({
   status: z.enum(["ACTIVE", "EXPIRING_SOON", "EXPIRED", "DECOMMISSIONED"]).optional(),
   clientId: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  workspaceId: z.string().optional().nullable(),
 });

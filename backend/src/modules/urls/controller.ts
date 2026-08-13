@@ -2,6 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import os from "os";
+import { renderQrData } from "../qrcodes/controller.js";
 
 const prisma = new PrismaClient();
 
@@ -14,17 +16,14 @@ export async function createShortUrl(req: Request, res: Response, next: NextFunc
     const {
       originalUrl,
       alias,
-      expiryDate,
       clientId,
       projectId,
       category,
-      domainId,
       password,
-      maxClicks,
-      redirectType,
       status,
       tags,
       notes,
+      workspaceId,
     } = req.body;
 
     let shortCode = alias || generateShortCode();
@@ -39,33 +38,82 @@ export async function createShortUrl(req: Request, res: Response, next: NextFunc
     const createdBy = (req as any).user?.userId || null;
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
+    let finalClientId = clientId || null;
+    let finalWorkspaceId = workspaceId || null;
+
+    if (projectId) {
+      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      if (project) {
+        if (!finalClientId && project.clientId) finalClientId = project.clientId;
+        if (!finalWorkspaceId && project.workspaceId) finalWorkspaceId = project.workspaceId;
+      }
+    }
+
     const url = await prisma.shortUrl.create({
       data: {
         originalUrl,
         shortCode,
         alias: alias || null,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
-        clientId: clientId || null,
+        clientId: finalClientId,
         projectId: projectId || null,
         category: category || null,
-        domainId: domainId || null,
         passwordHash,
-        maxClicks: maxClicks ? Number(maxClicks) : null,
-        redirectType: redirectType || "302",
         status: status || "ACTIVE",
         tags: tags || null,
         notes: notes || null,
+        workspaceId: finalWorkspaceId,
         createdBy,
       },
       include: {
         client: { select: { id: true, name: true, company: true } },
         project: { select: { id: true, name: true } },
-        domain: { select: { id: true, domain: true } },
         creator: { select: { id: true, name: true, email: true } },
       },
     });
 
-    return res.status(201).json({ success: true, data: url });
+    let baseUrl = req.get("origin") || process.env.CORS_ORIGIN || "http://localhost:3000";
+    
+    // Replace localhost with local IP for mobile phone scanning during dev
+    if (baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")) {
+      const interfaces = os.networkInterfaces();
+      let localIp = "localhost";
+      for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name] || []) {
+          if (iface.family === "IPv4" && !iface.internal) {
+            localIp = iface.address;
+            break;
+          }
+        }
+        if (localIp !== "localhost") break;
+      }
+      baseUrl = baseUrl.replace("localhost", localIp).replace("127.0.0.1", localIp);
+    }
+
+    const shortUrlString = `${baseUrl}/s/${url.shortCode}`;
+    const qrCode = await prisma.qrCode.create({
+      data: {
+        name: `QR for ${url.alias || url.shortCode}`,
+        type: "URL",
+        content: shortUrlString,
+        shortUrlId: url.id,
+        clientId: finalClientId,
+        projectId: projectId || null,
+        workspaceId: finalWorkspaceId,
+        format: "SVG",
+        size: 256,
+      }
+    });
+
+    const qrData = await renderQrData(
+      qrCode.content,
+      qrCode.format,
+      qrCode.size,
+      qrCode.foregroundColor,
+      qrCode.backgroundColor,
+      qrCode.errorCorrectionLevel as any
+    );
+
+    return res.status(201).json({ success: true, data: { ...url, qrCodes: [{ ...qrCode, qrData }] } });
   } catch (error) {
     return next(error);
   }
@@ -80,35 +128,29 @@ export async function updateShortUrl(req: Request, res: Response, next: NextFunc
     const {
       originalUrl,
       alias,
-      expiryDate,
       clientId,
       projectId,
       category,
-      domainId,
       password,
-      maxClicks,
-      redirectType,
       status,
       tags,
       notes,
+      workspaceId,
     } = req.body;
 
     const updateData: Record<string, unknown> = {};
     if (originalUrl) updateData.originalUrl = originalUrl;
     if (alias !== undefined) updateData.alias = alias || null;
-    if (expiryDate !== undefined) updateData.expiryDate = expiryDate ? new Date(expiryDate) : null;
     if (clientId !== undefined) updateData.clientId = clientId || null;
     if (projectId !== undefined) updateData.projectId = projectId || null;
     if (category !== undefined) updateData.category = category || null;
-    if (domainId !== undefined) updateData.domainId = domainId || null;
     if (password !== undefined) {
       updateData.passwordHash = password ? await bcrypt.hash(password, 10) : null;
     }
-    if (maxClicks !== undefined) updateData.maxClicks = maxClicks ? Number(maxClicks) : null;
-    if (redirectType) updateData.redirectType = redirectType;
     if (status) updateData.status = status;
     if (tags !== undefined) updateData.tags = tags || null;
     if (notes !== undefined) updateData.notes = notes || null;
+    if (workspaceId !== undefined) updateData.workspaceId = workspaceId || null;
 
     const url = await prisma.shortUrl.update({
       where: { id },
@@ -116,7 +158,6 @@ export async function updateShortUrl(req: Request, res: Response, next: NextFunc
       include: {
         client: { select: { id: true, name: true, company: true } },
         project: { select: { id: true, name: true } },
-        domain: { select: { id: true, domain: true } },
         creator: { select: { id: true, name: true, email: true } },
       },
     });
@@ -134,6 +175,7 @@ export async function listUrls(req: Request, res: Response, next: NextFunction) 
     const search = typeof req.query.search === "string" ? req.query.search : "";
     const clientId = typeof req.query.clientId === "string" ? req.query.clientId : "";
     const projectId = typeof req.query.projectId === "string" ? req.query.projectId : "";
+    const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : "";
     const status = typeof req.query.status === "string" ? req.query.status : "";
 
     const where: any = {};
@@ -148,6 +190,7 @@ export async function listUrls(req: Request, res: Response, next: NextFunction) 
     }
     if (clientId) where.clientId = clientId;
     if (projectId) where.projectId = projectId;
+    if (workspaceId) where.workspaceId = workspaceId;
     if (status) where.status = status;
 
     const [data, total] = await Promise.all([
@@ -156,9 +199,9 @@ export async function listUrls(req: Request, res: Response, next: NextFunction) 
         include: {
           client: { select: { id: true, name: true, company: true } },
           project: { select: { id: true, name: true } },
-          domain: { select: { id: true, domain: true } },
           creator: { select: { id: true, name: true, email: true } },
           _count: { select: { clicks: true } },
+          qrCodes: true,
         },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -167,9 +210,20 @@ export async function listUrls(req: Request, res: Response, next: NextFunction) 
       prisma.shortUrl.count({ where }),
     ]);
 
+    const dataWithQr = await Promise.all(
+      data.map(async (url) => {
+        if (url.qrCodes && url.qrCodes.length > 0) {
+          const qr = url.qrCodes[0];
+          const qrData = await renderQrData(qr.content, qr.format, qr.size, qr.foregroundColor, qr.backgroundColor, qr.errorCorrectionLevel as any);
+          return { ...url, qrCodes: [{ ...qr, qrData }] };
+        }
+        return url;
+      })
+    );
+
     return res.json({
       success: true,
-      data,
+      data: dataWithQr,
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
@@ -185,13 +239,21 @@ export async function getUrlById(req: Request, res: Response, next: NextFunction
       include: {
         client: { select: { id: true, name: true, company: true } },
         project: { select: { id: true, name: true } },
-        domain: { select: { id: true, domain: true } },
         creator: { select: { id: true, name: true, email: true } },
         _count: { select: { clicks: true } },
+        qrCodes: true,
       },
     });
     if (!url) return res.status(404).json({ error: "URL not found" });
-    return res.json({ success: true, data: url });
+
+    let finalUrl = url as any;
+    if (url.qrCodes && url.qrCodes.length > 0) {
+      const qr = url.qrCodes[0];
+      const qrData = await renderQrData(qr.content, qr.format, qr.size, qr.foregroundColor, qr.backgroundColor, qr.errorCorrectionLevel as any);
+      finalUrl = { ...url, qrCodes: [{ ...qr, qrData }] };
+    }
+
+    return res.json({ success: true, data: finalUrl });
   } catch (error) {
     return next(error);
   }
@@ -205,7 +267,6 @@ export async function getUrlStats(req: Request, res: Response, next: NextFunctio
       include: {
         client: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
-        domain: { select: { id: true, domain: true } },
         clicks: { orderBy: { clickedAt: "desc" }, take: 100 },
         _count: { select: { clicks: true } },
       },
@@ -261,9 +322,14 @@ export async function deleteUrl(req: Request, res: Response, next: NextFunction)
 export async function redirectShortUrl(req: Request, res: Response, next: NextFunction) {
   try {
     const shortCode = req.params.shortCode as string;
-    const url = await prisma.shortUrl.findUnique({
-      where: { shortCode },
-      include: { client: true, project: true, domain: true },
+    const url = await prisma.shortUrl.findFirst({
+      where: { 
+        OR: [
+          { shortCode },
+          { alias: shortCode }
+        ]
+      },
+      include: { client: true, project: true },
     });
 
     if (!url) {
@@ -286,28 +352,12 @@ export async function redirectShortUrl(req: Request, res: Response, next: NextFu
       `);
     }
 
-    if (url.status === "EXPIRED" || (url.expiryDate && new Date() > url.expiryDate)) {
-      if (url.status !== "EXPIRED") {
-        await prisma.shortUrl.update({ where: { id: url.id }, data: { status: "EXPIRED" } });
-      }
+    if (url.status === "EXPIRED") {
       return res.status(410).send(`
         <!DOCTYPE html>
         <html>
         <head><title>Link Expired</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb;color:#374151;}.card{background:#fff;padding:2rem;border-radius:1rem;box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);text-align:center;max-width:400px;}</style></head>
         <body><div class="card"><h2 style="color:#ef4444;margin-top:0;">Link Expired</h2><p>This short link has expired.</p></div></body>
-        </html>
-      `);
-    }
-
-    if (url.maxClicks && url.clickCount >= url.maxClicks) {
-      if (url.status !== "EXPIRED") {
-        await prisma.shortUrl.update({ where: { id: url.id }, data: { status: "EXPIRED" } });
-      }
-      return res.status(410).send(`
-        <!DOCTYPE html>
-        <html>
-        <head><title>Click Limit Reached</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb;color:#374151;}.card{background:#fff;padding:2rem;border-radius:1rem;box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);text-align:center;max-width:400px;}</style></head>
-        <body><div class="card"><h2 style="color:#ef4444;margin-top:0;">Click Limit Reached</h2><p>This short link has reached its maximum allowed clicks (${url.maxClicks}).</p></div></body>
         </html>
       `);
     }
@@ -370,8 +420,7 @@ export async function redirectShortUrl(req: Request, res: Response, next: NextFu
       },
     });
 
-    const statusCode = parseInt(url.redirectType || "302", 10) === 301 ? 301 : 302;
-    return res.redirect(statusCode, url.originalUrl);
+    return res.redirect(302, url.originalUrl);
   } catch (error) {
     return next(error);
   }

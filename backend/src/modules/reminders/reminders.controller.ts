@@ -63,78 +63,132 @@ export async function deleteNotification(req: Request, res: Response): Promise<v
   res.json({ success: true, data: { message: "Notification deleted" } });
 }
 
-export async function getExpiringItems(_req: Request, res: Response): Promise<void> {
+export async function getReminders(req: Request, res: Response): Promise<void> {
+  const typeFilter = String(req.query.type || "all");
+  const workspaceId = String(req.query.workspaceId || "");
   const now = new Date();
   const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
 
-  const [servers, domains, expiredServers, expiredDomains] = await Promise.all([
-    prisma.server.findMany({
-      where: { expiryDate: { not: null, gte: now, lte: ninetyDays }, status: { not: "DECOMMISSIONED" } },
-      orderBy: { expiryDate: "asc" },
-      include: { client: { select: { id: true, name: true } } },
-    }),
-    prisma.domain.findMany({
-      where: {
-        OR: [
-          { expirationDate: { not: null, gte: now, lte: ninetyDays } },
-          { sslExpiration: { not: null, gte: now, lte: ninetyDays } },
-        ],
-      },
-      orderBy: { expirationDate: "asc" },
-      include: { client: { select: { id: true, name: true } } },
-    }),
-    prisma.server.findMany({
-      where: { expiryDate: { not: null, lt: now }, status: { not: "DECOMMISSIONED" } },
-      include: { client: { select: { id: true, name: true } } },
-    }),
-    prisma.domain.findMany({
-      where: { expirationDate: { not: null, lt: now } },
-      include: { client: { select: { id: true, name: true } } },
-    }),
-  ]);
-
-  const categorize = (days: number) => {
-    if (days <= 7) return "critical";
-    if (days <= 30) return "warning";
-    return "info";
-  };
-
   const getDaysRemaining = (date: Date) => Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-  const serverReminders = servers.map((s) => ({
-    type: "server",
-    id: s.id,
-    name: s.name,
-    provider: s.provider,
-    expiryDate: s.expiryDate,
-    daysRemaining: s.expiryDate ? getDaysRemaining(s.expiryDate) : null,
-    urgency: s.expiryDate ? categorize(getDaysRemaining(s.expiryDate)) : "info",
-    client: s.client,
-  }));
+  const reminders: any[] = [];
+  const wsFilter = workspaceId ? { workspaceId } : {};
 
-  const domainReminders = domains.map((d) => ({
-    type: "domain",
-    id: d.id,
-    name: d.domain,
-    registrar: d.registrar,
-    expirationDate: d.expirationDate,
-    sslExpiration: d.sslExpiration,
-    daysRemaining: d.expirationDate ? getDaysRemaining(d.expirationDate) : null,
-    sslDaysRemaining: d.sslExpiration ? getDaysRemaining(d.sslExpiration) : null,
-    urgency: d.expirationDate ? categorize(getDaysRemaining(d.expirationDate)) : "info",
-    client: d.client,
-  }));
+  if (typeFilter === "all" || typeFilter === "projects") {
+    const projects = await prisma.project.findMany({
+      where: { ...wsFilter, endDate: { not: null, lte: ninetyDays }, status: { notIn: ["COMPLETED", "ARCHIVED"] } },
+      include: { client: { select: { name: true } } },
+    });
+    reminders.push(...projects.map(p => ({
+      id: p.id,
+      type: "projects",
+      name: p.name,
+      client_name: p.client?.name || null,
+      project_name: null,
+      due_date: p.endDate,
+      days_remaining: getDaysRemaining(p.endDate!),
+      status: p.status,
+      priority: null,
+      redirect_url: `/projects/${p.id}`
+    })));
+  }
+
+  if (typeFilter === "all" || typeFilter === "servers") {
+    const servers = await prisma.server.findMany({
+      where: { ...wsFilter, expiryDate: { not: null, lte: ninetyDays }, status: { not: "DECOMMISSIONED" } },
+      include: { client: { select: { name: true } }, project: { select: { name: true } } },
+    });
+    reminders.push(...servers.map(s => ({
+      id: s.id,
+      type: "servers",
+      name: s.name,
+      client_name: s.client?.name || null,
+      project_name: s.project?.name || null,
+      due_date: s.expiryDate,
+      days_remaining: getDaysRemaining(s.expiryDate!),
+      status: s.status,
+      priority: null,
+      redirect_url: `/servers/${s.id}`
+    })));
+  }
+
+  if (typeFilter === "all" || typeFilter === "domains") {
+    const domains = await prisma.domain.findMany({
+      where: { ...wsFilter, expirationDate: { not: null, lte: ninetyDays } },
+      include: { client: { select: { name: true } }, project: { select: { name: true } } },
+    });
+    reminders.push(...domains.map(d => ({
+      id: d.id,
+      type: "domains",
+      name: d.domain,
+      client_name: d.client?.name || null,
+      project_name: d.project?.name || null,
+      due_date: d.expirationDate,
+      days_remaining: getDaysRemaining(d.expirationDate!),
+      status: d.autoRenewal ? "Auto-renew" : "Manual",
+      priority: null,
+      redirect_url: `/domains/${d.id}`
+    })));
+  }
+
+  if (typeFilter === "all" || typeFilter === "maintenance") {
+    const tickets = await prisma.maintenanceRecord.findMany({
+      where: { ...wsFilter, targetCompletionDate: { not: null, lte: ninetyDays }, status: { notIn: ["RESOLVED", "CANCELLED"] } },
+      include: { client: { select: { name: true } }, project: { select: { name: true } } },
+    });
+    reminders.push(...tickets.map(t => ({
+      id: t.id,
+      type: "maintenance",
+      name: t.title,
+      client_name: t.client?.name || null,
+      project_name: t.project?.name || null,
+      due_date: t.targetCompletionDate,
+      days_remaining: getDaysRemaining(t.targetCompletionDate!),
+      status: t.status,
+      priority: t.priority,
+      redirect_url: `/maintenance?ticketId=${t.id}`
+    })));
+  }
+
+  reminders.sort((a, b) => a.days_remaining - b.days_remaining);
+
+  res.json({ success: true, data: reminders });
+}
+
+export async function getRemindersSummary(req: Request, res: Response): Promise<void> {
+  const workspaceId = String(req.query.workspaceId || "");
+  const now = new Date();
+  const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const getDaysRemaining = (date: Date) => Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  
+  const wsFilter = workspaceId ? { workspaceId } : {};
+
+  const [projects, servers, domains, tickets] = await Promise.all([
+    prisma.project.findMany({ where: { ...wsFilter, endDate: { not: null, lte: ninetyDays }, status: { notIn: ["COMPLETED", "ARCHIVED"] } } }),
+    prisma.server.findMany({ where: { ...wsFilter, expiryDate: { not: null, lte: ninetyDays }, status: { not: "DECOMMISSIONED" } } }),
+    prisma.domain.findMany({ where: { ...wsFilter, expirationDate: { not: null, lte: ninetyDays } } }),
+    prisma.maintenanceRecord.findMany({ where: { ...wsFilter, targetCompletionDate: { not: null, lte: ninetyDays }, status: { notIn: ["RESOLVED", "CANCELLED"] } } })
+  ]);
+
+  let expired = 0;
+  let in30 = 0;
+  let in90 = 0;
+
+  const processDate = (date: Date | null) => {
+    if (!date) return;
+    const days = getDaysRemaining(date);
+    if (days < 0) expired++;
+    else if (days >= 0 && days <= 30) in30++;
+    else if (days > 30 && days <= 90) in90++;
+  };
+
+  projects.forEach(p => processDate(p.endDate));
+  servers.forEach(s => processDate(s.expiryDate));
+  domains.forEach(d => processDate(d.expirationDate));
+  tickets.forEach(t => processDate(t.targetCompletionDate));
 
   res.json({
     success: true,
-    data: {
-      expiring: [...serverReminders, ...domainReminders].sort((a, b) => (a.daysRemaining ?? 999) - (b.daysRemaining ?? 999)),
-      expired: [...expiredServers.map((s) => ({ type: "server" as const, id: s.id, name: s.name, expiryDate: s.expiryDate, client: s.client })), ...expiredDomains.map((d) => ({ type: "domain" as const, id: d.id, name: d.domain, expirationDate: d.expirationDate, client: d.client }))],
-      stats: {
-        expiringSoon30: serverReminders.filter((s) => s.urgency === "critical" || s.urgency === "warning").length + domainReminders.filter((d) => d.urgency === "critical" || d.urgency === "warning").length,
-        expiringSoon60: serverReminders.length + domainReminders.length,
-        expired: expiredServers.length + expiredDomains.length,
-      },
-    },
+    data: { expired, in30, in90 }
   });
 }

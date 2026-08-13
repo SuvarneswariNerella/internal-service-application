@@ -10,20 +10,14 @@ export const createUrlSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
-  expiryDate: z.string().optional().nullable().or(z.literal("")),
   clientId: z.string().optional().nullable().or(z.literal("")),
   projectId: z.string().optional().nullable().or(z.literal("")),
   category: z.string().optional().nullable().or(z.literal("")),
-  domainId: z.string().optional().nullable().or(z.literal("")),
   password: z.string().optional().nullable().or(z.literal("")),
-  maxClicks: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
-    z.number().int().positive().optional()
-  ),
-  redirectType: z.enum(["301", "302"]).optional().default("302"),
   status: z.enum(["ACTIVE", "PAUSED", "EXPIRED"]).optional().default("ACTIVE"),
   tags: z.string().optional().nullable().or(z.literal("")),
   notes: z.string().optional().nullable().or(z.literal("")),
+  workspaceId: z.string().optional().nullable().or(z.literal("")),
 });
 
 export const listUrlsSchema = z.object({
@@ -33,4 +27,5 @@ export const listUrlsSchema = z.object({
   clientId: z.string().optional(),
   projectId: z.string().optional(),
   status: z.string().optional(),
+  workspaceId: z.string().optional(),
 });

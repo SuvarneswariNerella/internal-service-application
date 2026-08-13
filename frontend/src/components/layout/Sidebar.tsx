@@ -12,9 +12,11 @@ import {
   Bell,
   Shield,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useAuthStore } from "@/store/authStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useSidebarStatsStore, type SidebarCounts } from "@/store/sidebarStatsStore";
 
 interface NavItem {
@@ -33,6 +35,7 @@ const navItems: NavItem[] = [
   { to: "/urls", label: "URL Shortener", icon: Link2, countKey: "urls" },
   { to: "/qr-codes", label: "QR Codes", icon: QrCode, countKey: "qrCodes" },
   { to: "/finance", label: "Finance & Docs", icon: Wallet, countKey: "financeRecords" },
+  { to: "/maintenance", label: "Maintenance", icon: Wrench, countKey: "maintenanceRecords" },
   { to: "/reminders", label: "Reminders", icon: Bell, countKey: "reminders" },
 ];
 
@@ -46,19 +49,20 @@ interface SidebarProps {
 export default function Sidebar({ isOpen }: SidebarProps) {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "ADMIN";
+  const { globalWorkspaceId } = useWorkspaceStore();
   const { counts, fetchCounts } = useSidebarStatsStore();
 
   useEffect(() => {
-    // Initial fetch on mount
-    fetchCounts();
+    // Initial fetch on mount or when workspace changes
+    fetchCounts(globalWorkspaceId);
 
     // Poll backend every 5 seconds for real-time update
     const interval = setInterval(() => {
-      fetchCounts();
+      fetchCounts(globalWorkspaceId);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [fetchCounts]);
+  }, [fetchCounts, globalWorkspaceId]);
 
   return (
     <aside

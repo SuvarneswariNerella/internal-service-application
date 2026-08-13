@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modern Invoice</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      color: #333;
+      font-family: "Inter", sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.6em;
+      background-color: #f5f6fa;
+      margin: 0;
+      padding: 0;
+    }
+    .tm_container {
+      max-width: 880px;
+      padding: 30px 15px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+    .tm_invoice_wrap {
+      position: relative;
+    }
+    .tm_invoice {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .tm_invoice_btns {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin-top: 0px;
+      margin-left: 20px;
+      position: absolute;
+      left: 100%;
+      top: 0;
+      box-shadow: -2px 0 24px -2px rgba(43, 55, 72, 0.05);
+      border: 3px solid #fff;
+      border-radius: 6px;
+      background-color: #fff;
+    }
+    .tm_invoice_btn {
+      display: inline-flex;
+      align-items: center;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      background-color: transparent;
+      position: relative;
+      color: inherit;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      -webkit-appearance: button;
+      appearance: button;
+    }
+    .tm_invoice_btn svg {
+      width: 24px;
+    }
+    .tm_invoice_btn .tm_btn_icon {
+      padding: 0;
+      display: flex;
+      height: 42px;
+      width: 42px;
+      align-items: center;
+      justify-content: center;
+    }
+    .tm_invoice_btn .tm_btn_text {
+      position: absolute;
+      left: 100%;
+      background-color: #111;
+      color: #fff;
+      padding: 3px 12px;
+      display: inline-block;
+      margin-left: 10px;
+      border-radius: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 500;
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+    }
+    .tm_invoice_btn:hover .tm_btn_text {
+      opacity: 1;
+      visibility: visible;
+    }
+    .tm_invoice_btn.tm_color1 {
+      background-color: rgba(0, 122, 255, 0.1);
+      color: #007aff;
+      border-radius: 5px 5px 0 0;
+    }
+    .tm_invoice_btn.tm_color1:hover {
+      background-color: rgba(0, 122, 255, 0.2);
+    }
+    .tm_invoice_btn.tm_color2 {
+      background-color: rgba(52, 199, 89, 0.1);
+      color: #34c759;
+      border-radius: 0 0 5px 5px;
+    }
+    .tm_invoice_btn.tm_color2:hover {
+      background-color: rgba(52, 199, 89, 0.2);
+    }
+    
+    .modern-header {
+      background: linear-gradient(135deg, #003b8e, #0056b3);
+      position: relative;
+      padding: 60px 50px 120px 50px;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+    .modern-table th {
+      background-color: #003b8e !important;
+      color: #ffffff !important;
+      border: 1px solid #003b8e;
+      padding: 15px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .modern-table td {
+      border: 1px solid #e5e5e5;
+      padding: 15px;
+    }
+    .modern-subtotal-row {
+      background-color: #003b8e !important;
+      color: #ffffff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .note-lines {
+      border-bottom: 1px solid #ccc;
+      height: 25px;
+      margin-bottom: 5px;
+      width: 100%;
+    }
+    @media print {
+      .tm_hide_print { display: none !important; }
+      body, html { background-color: #fff !important; }
+      .tm_invoice { box-shadow: none !important; }
+    }
+    @media (max-width: 999px) {
+      .tm_invoice_btns {
+        flex-direction: row;
+        position: relative;
+        left: auto;
+        margin: 20px auto 0;
+        width: fit-content;
+      }
+      .tm_invoice_btn.tm_color1 { border-radius: 5px 0 0 5px; }
+      .tm_invoice_btn.tm_color2 { border-radius: 0 5px 5px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="tm_container">
+    <div class="tm_invoice_wrap">
+      <div class="tm_invoice" id="tm_download_section">
+        <div class="modern-header">
+          <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1;" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="#ffffff" d="M0,100 C400,300 900,-50 1440,150 L1440,0 L0,0 Z"></path>
+          </svg>
+          <h1 style="margin: 0; font-size: 48px; line-height: 1.1; position: relative; z-index: 1; max-width: 55%; word-break: break-word;">INVOICE</h1>
+          <h3 style="margin: 0; font-size: 24px; line-height: 1.2; position: relative; z-index: 1; text-align: right; max-width: 40%;">NO: #LL93784</h3>
+          <svg style="position: absolute; bottom: -1px; left: 0; width: 100%; height: 120px;" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="#ffffff" d="M0,220 C300,320 800,50 1440,250 L1440,320 L0,320 Z"></path>
+          </svg>
+        </div>
+
+        <div style="padding: 30px 50px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+            <div>
+              <p style="margin: 0; font-size: 16px; color: #333;"><b>Payment Method:</b> Paypal, Western Union</p>
+            </div>
+            <div style="text-align: right; color: #333;">
+              <p style="margin: 0 0 5px 0; font-size: 16px;"><b>Invoice No:</b> #LL93784</p>
+              <p style="margin: 0; font-size: 16px;"><b>Date:</b> 01.07.2022</p>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+            <div style="width: 45%;">
+              <h3 style="font-size: 20px; color: #003b8e; margin: 0 0 10px 0;">Bill To:</h3>
+              <p style="margin: 0; line-height: 1.6; color: #555;">
+                Lowell H. Dominguez<br>
+                84 Spilman Street, London<br>
+                United Kingdom<br>
+                lowell@gmail.com
+              </p>
+            </div>
+            <div style="width: 45%;">
+              <h3 style="font-size: 20px; color: #003b8e; margin: 0 0 10px 0;">From:</h3>
+              <p style="margin: 0; line-height: 1.6; color: #555;">
+                Laralink Ltd<br>
+                86-90 Paul Street, London<br>
+                England EC2A 4NE<br>
+                demo@gmail.com
+              </p>
+            </div>
+          </div>
+
+          <table class="modern-table" style="width: 100%; border-collapse: collapse; margin-bottom: 0;">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Item</th>
+                <th style="text-align: left;">Description</th>
+                <th style="text-align: center;">Price</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: center;">GST %</th>
+                <th style="text-align: center;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1. Website Design</td>
+                <td>Six web page designs and three times revision</td>
+                <td style="text-align: center;">$350</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: center;">$350</td>
+              </tr>
+              <tr>
+                <td>2. Web Development</td>
+                <td>Convert pixel-perfect frontend and make it dynamic</td>
+                <td style="text-align: center;">$600</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: center;">$600</td>
+              </tr>
+              <tr>
+                <td>3. App Development</td>
+                <td>Android &amp; Ios Application Development</td>
+                <td style="text-align: center;">$200</td>
+                <td style="text-align: center;">2</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: center;">$400</td>
+              </tr>
+              <tr>
+                <td>4. Digital Marketing</td>
+                <td>Facebook, Youtube and Google Marketing</td>
+                <td style="text-align: center;">$100</td>
+                <td style="text-align: center;">3</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: center;">$300</td>
+              </tr>
+              <tr class="modern-subtotal-row">
+                <td colspan="3" style="border: none; background-color: #fff !important; color: transparent !important;"></td>
+                <td colspan="2" style="padding: 10px 15px; text-align: left; border: 1px solid #003b8e;"><b>Sub Total</b></td>
+                <td style="padding: 10px 15px; text-align: center; border: 1px solid #003b8e;"><b>$1650</b></td>
+              </tr>
+              <tr>
+                <td colspan="3" style="border: none;"></td>
+                <td colspan="2" style="padding: 10px 15px; text-align: left; border: 1px solid #e5e5e5; color: #333;"><b>Total GST</b></td>
+                <td style="padding: 10px 15px; text-align: center; border: 1px solid #e5e5e5; color: #333;"><b>$82</b></td>
+              </tr>
+              <tr class="modern-subtotal-row">
+                <td colspan="3" style="border: none; background-color: #fff !important; color: transparent !important;"></td>
+                <td colspan="2" style="padding: 10px 15px; text-align: left; border: 1px solid #003b8e;"><b>Grand Total</b></td>
+                <td style="padding: 10px 15px; text-align: center; border: 1px solid #003b8e;"><b>$1732</b></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+            <div style="width: 50%;">
+              <div style="margin-bottom: 25px;">
+                <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #333;"><b>Payment Info:</b></h4>
+                <p style="margin: 0; line-height: 1.5; color: #555;">Credit Card - 236***********928<br>Amount: $1732</p>
+              </div>
+              
+
+              <div>
+                <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #333;"><b>Terms &amp; Conditions:</b></h4>
+                <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #555;">All claims relating to quantity or shipping errors shall be waived by Buyer unless made in writing to Seller within thirty (30) days after delivery of goods to the address stated.</p>
+              </div>
+            </div>
+            
+            <div style="width: 40%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+              <div style="text-align: center;">
+                <img src="https://placehold.co/200x80/ffffff/000000/png?text=Signature&font=playfair-display" alt="Signature" style="max-height: 80px; margin-bottom: 10px;">
+                <div style="border-top: 2px dotted #ccc; width: 200px; margin-bottom: 10px;"></div>
+                <p style="margin: 0; color: #003b8e; font-size: 16px;">Jhon Donate</p>
+                <p style="margin: 0; color: #555; font-size: 14px;">Accounts Manager</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-top: 50px;">
+            <h2 style="margin: 0; font-size: 42px; color: #003b8e; font-weight: 700;">Thank You!</h2>
+          </div>
+        </div>
+      </div>
+      
+
+    </div>
+  </div>
+
+
+</body>
+</html>

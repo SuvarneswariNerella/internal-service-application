@@ -25,6 +25,7 @@ import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
 import { urlsApi, type ShortUrl } from "@/api/urls";
 import { useToastStore } from "@/store/toastStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 const TYPE_OPTIONS = [
   { value: "URL", label: "URL", icon: LinkIcon },
@@ -111,6 +112,7 @@ export default function QrCodeFormModal({
   onSuccess,
 }: QrCodeFormModalProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -158,7 +160,10 @@ export default function QrCodeFormModal({
     if (isOpen) {
       setIsLoadingClients(true);
       clientsApi
-        .list({ pageSize: 1000 })
+        .list({ 
+          pageSize: 1000,
+          workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+        })
         .then((res) => {
           if (res.data?.data) setClients(res.data.data);
         })
@@ -369,6 +374,7 @@ export default function QrCodeFormModal({
         expiryDate: expiryDate ? new Date(expiryDate).toISOString() : null,
         status,
         tags: tags || null,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
         saveToLibrary: true,
       };
 

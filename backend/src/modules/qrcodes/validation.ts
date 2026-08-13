@@ -17,6 +17,7 @@ export const qrCodeSchema = z.object({
   status: z.enum(["ACTIVE", "ARCHIVED", "EXPIRED"]).optional().default("ACTIVE"),
   tags: z.string().nullable().optional(),
   saveToLibrary: z.boolean().optional().default(true),
+  workspaceId: z.string().nullable().optional(),
 });
 
 export const previewQrSchema = z.object({

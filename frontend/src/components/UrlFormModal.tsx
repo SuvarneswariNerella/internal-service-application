@@ -2,13 +2,9 @@ import { useState, useEffect } from "react";
 import {
   Link as LinkIcon,
   X,
-  Calendar,
   Hash,
   User,
   FolderKanban,
-  Globe,
-  MousePointerClick,
-  ArrowRightLeft,
   ShieldAlert,
   Layers,
   ChevronDown,
@@ -16,8 +12,9 @@ import {
 import { urlsApi, type ShortUrl } from "@/api/urls";
 import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
-import { domainsApi, type Domain } from "@/api/domains";
+import { qrCodesApi } from "@/api/qrCodes";
 import { useToastStore } from "@/store/toastStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 const CATEGORY_OPTIONS = [
   "Client Deliverable",
@@ -97,13 +94,15 @@ export default function UrlFormModal({
   onSuccess,
 }: UrlFormModalProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [qrPreview, setQrPreview] = useState<string>("");
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
 
   // Dropdown data
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [domains, setDomains] = useState<Domain[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
@@ -114,37 +113,56 @@ export default function UrlFormModal({
     clientId: "",
     projectId: "",
     category: "",
-    domainId: "",
-    maxClicks: "",
-    redirectType: "302" as "301" | "302",
-    expiryDate: "",
     status: "ACTIVE" as "ACTIVE" | "PAUSED" | "EXPIRED",
   });
 
   const isEdit = !!urlItem;
+
+  // Fetch QR Preview
+  useEffect(() => {
+    if (!form.originalUrl && !form.alias) {
+      setQrPreview("");
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const previewContent = form.alias 
+          ? `${window.location.origin}/s/${form.alias}` 
+          : form.originalUrl;
+        
+        const res = await qrCodesApi.preview({
+          type: "URL",
+          content: previewContent,
+          format: "SVG"
+        });
+        if (res.data?.data?.qrData) {
+          setQrPreview(res.data.data.qrData);
+        }
+      } catch (err) {
+        // fail silently for preview
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [form.originalUrl, form.alias]);
 
   // Load clients & domains when modal opens
   useEffect(() => {
     if (isOpen) {
       setIsLoadingClients(true);
       clientsApi
-        .getOptions()
+        .getOptions({ workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId })
         .then((res) => {
           if (res.data?.data) setClients(res.data.data as Client[]);
         })
-        .catch(() => clientsApi.list({ pageSize: 1000 }))
+        .catch(() => clientsApi.list({ 
+          pageSize: 1000,
+          workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+        }))
         .then((res: any) => {
           if (res?.data?.data) setClients(res.data.data);
         })
         .catch(console.error)
         .finally(() => setIsLoadingClients(false));
-
-      domainsApi
-        .list({ pageSize: 100 })
-        .then((res) => {
-          if (res.data?.data) setDomains(res.data.data);
-        })
-        .catch(console.error);
     }
   }, [isOpen]);
 
@@ -175,12 +193,9 @@ export default function UrlFormModal({
         clientId: urlItem.clientId || urlItem.client?.id || "",
         projectId: urlItem.projectId || urlItem.project?.id || "",
         category: urlItem.category || "",
-        domainId: urlItem.domainId || urlItem.domain?.id || "",
-        maxClicks: urlItem.maxClicks ? String(urlItem.maxClicks) : "",
-        redirectType: urlItem.redirectType || "302",
-        expiryDate: urlItem.expiryDate ? (urlItem.expiryDate.split("T")[0] || "") : "",
         status: urlItem.status || "ACTIVE",
       });
+      setIsCustomCategory(urlItem.category ? !CATEGORY_OPTIONS.includes(urlItem.category) : false);
     } else {
       setForm({
         originalUrl: "",
@@ -188,12 +203,9 @@ export default function UrlFormModal({
         clientId: "",
         projectId: "",
         category: "",
-        domainId: "",
-        maxClicks: "",
-        redirectType: "302",
-        expiryDate: "",
         status: "ACTIVE",
       });
+      setIsCustomCategory(false);
     }
   }, [urlItem, isOpen]);
 
@@ -232,11 +244,8 @@ export default function UrlFormModal({
         clientId: form.clientId || undefined,
         projectId: form.projectId || undefined,
         category: form.category || undefined,
-        domainId: form.domainId || undefined,
-        maxClicks: form.maxClicks ? Number(form.maxClicks) : undefined,
-        redirectType: form.redirectType,
         status: form.status,
-        expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString() : undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
       };
 
       if (isEdit && urlItem?.id) {
@@ -330,17 +339,46 @@ export default function UrlFormModal({
 
             <FormField label="Category / Type">
               <InputBox badge={<Layers className="w-3.5 h-3.5" />} badgeBg="bg-teal-50 text-teal-600 border-teal-100">
-                <select
-                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 appearance-none focus:outline-none cursor-pointer font-medium"
-                  value={form.category}
-                  onChange={(e) => set("category", e.target.value)}
-                >
-                  <option value="" className="text-gray-400">Select category...</option>
-                  {CATEGORY_OPTIONS.map((cat) => (
-                    <option key={cat} value={cat} className="text-gray-900">{cat}</option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
+                {isCustomCategory ? (
+                  <div className="flex w-full h-full items-center">
+                    <input
+                      type="text"
+                      className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
+                      placeholder="Type custom category..."
+                      value={form.category}
+                      onChange={(e) => set("category", e.target.value)}
+                      autoFocus
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => { setIsCustomCategory(false); set("category", ""); }}
+                      className="px-2.5 text-gray-400 hover:text-gray-600 transition-colors h-full flex items-center"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 appearance-none focus:outline-none cursor-pointer font-medium"
+                      value={CATEGORY_OPTIONS.includes(form.category) ? form.category : form.category ? "Other" : ""}
+                      onChange={(e) => {
+                        if (e.target.value === "Other") {
+                          setIsCustomCategory(true);
+                          set("category", "");
+                        } else {
+                          set("category", e.target.value);
+                        }
+                      }}
+                    >
+                      <option value="" className="text-gray-400">Select category...</option>
+                      {CATEGORY_OPTIONS.map((cat) => (
+                        <option key={cat} value={cat} className="text-gray-900">{cat}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
+                  </>
+                )}
               </InputBox>
             </FormField>
           </div>
@@ -393,69 +431,29 @@ export default function UrlFormModal({
             </FormField>
           </div>
 
-          {/* Row 3: Base Domain & Redirect Type */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Base Domain">
-              <InputBox badge={<Globe className="w-3.5 h-3.5" />} badgeBg="bg-sky-50 text-sky-600 border-sky-100">
-                <select
-                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 appearance-none focus:outline-none cursor-pointer font-medium"
-                  value={form.domainId}
-                  onChange={(e) => set("domainId", e.target.value)}
-                >
-                  <option value="">System Default ({window.location.host})</option>
-                  {domains.map((d) => (
-                    <option key={d.id} value={d.id} className="text-gray-900 font-medium">
-                      {d.domain}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
-              </InputBox>
-            </FormField>
-
-            <FormField label="Redirect Type">
-              <InputBox badge={<ArrowRightLeft className="w-3.5 h-3.5" />} badgeBg="bg-blue-50 text-blue-600 border-blue-100">
-                <select
-                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 appearance-none focus:outline-none cursor-pointer font-medium"
-                  value={form.redirectType}
-                  onChange={(e) => set("redirectType", e.target.value)}
-                >
-                  <option value="302">302 - Temporary Redirect</option>
-                  <option value="301">301 - Permanent Redirect</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
-              </InputBox>
+          {/* QR Code Preview Field */}
+          <div className="pt-2">
+            <FormField label="Generated QR Code (Preview)">
+              <div className="flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-lg h-[120px] overflow-hidden">
+                {qrPreview ? (
+                  qrPreview.startsWith("data:") ? (
+                    <img src={qrPreview} alt="QR Code Preview" className="h-full object-contain mix-blend-multiply" />
+                  ) : (
+                    <div 
+                      className="h-full flex items-center justify-center mix-blend-multiply [&>svg]:h-full [&>svg]:w-auto" 
+                      dangerouslySetInnerHTML={{ __html: qrPreview }} 
+                    />
+                  )
+                ) : (
+                  <p className="text-gray-400 text-xs text-center">
+                    Enter a destination URL to instantly preview the QR code that will be mapped to this link.
+                  </p>
+                )}
+              </div>
             </FormField>
           </div>
 
-          {/* Row 4: Max Click Limit & Expiry Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Max Click Limit">
-              <InputBox badge={<MousePointerClick className="w-3.5 h-3.5" />} badgeBg="bg-red-50 text-red-600 border-red-100">
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
-                  placeholder="Unlimited"
-                  value={form.maxClicks}
-                  onChange={(e) => set("maxClicks", e.target.value)}
-                />
-              </InputBox>
-            </FormField>
-
-            <FormField label="Expiry Date">
-              <InputBox badge={<Calendar className="w-3.5 h-3.5" />} badgeBg="bg-amber-50 text-amber-600 border-amber-100">
-                <input
-                  type="date"
-                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
-                  value={form.expiryDate}
-                  onChange={(e) => set("expiryDate", e.target.value)}
-                />
-              </InputBox>
-            </FormField>
-          </div>
-
-          {/* Row 5: Status */}
+          {/* Row 3: Status */}
           <FormField label="Status">
             <InputBox badge={<ShieldAlert className="w-3.5 h-3.5" />} badgeBg="bg-emerald-50 text-emerald-600 border-emerald-100">
               <select

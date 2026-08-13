@@ -10,6 +10,7 @@ export async function listServers(req: Request, res: Response): Promise<void> {
   const status = String(req.query.status || "");
   const clientId = String(req.query.clientId || "");
   const projectId = String(req.query.projectId || "");
+  const workspaceId = String(req.query.workspaceId || "");
 
   const where: Record<string, unknown> = {};
   if (search) {
@@ -22,6 +23,7 @@ export async function listServers(req: Request, res: Response): Promise<void> {
   if (status) where.status = status;
   if (clientId) where.clientId = clientId;
   if (projectId) where.projectId = projectId;
+  if (workspaceId) where.workspaceId = workspaceId;
 
   const [servers, total] = await Promise.all([
     prisma.server.findMany({
@@ -84,6 +86,7 @@ export async function createServer(req: Request, res: Response): Promise<void> {
       status: req.body.status || "ACTIVE",
       clientId,
       projectId: req.body.projectId || null,
+      workspaceId: req.body.workspaceId || null,
     },
     include: {
       client: { select: { id: true, name: true } },
@@ -118,6 +121,7 @@ export async function updateServer(req: Request, res: Response): Promise<void> {
   if (req.body.status) updateData.status = req.body.status;
   if (req.body.clientId !== undefined) updateData.clientId = req.body.clientId || null;
   if (req.body.projectId !== undefined) updateData.projectId = req.body.projectId || null;
+  if (req.body.workspaceId !== undefined) updateData.workspaceId = req.body.workspaceId || null;
 
   if (req.body.projectId) {
     const project = await prisma.project.findUnique({ where: { id: req.body.projectId } });
@@ -165,15 +169,22 @@ export async function deleteServer(req: Request, res: Response): Promise<void> {
   res.json({ success: true, data: { message: "Server deleted" } });
 }
 
-export async function getExpiringServers(_req: Request, res: Response): Promise<void> {
+export async function getExpiringServers(req: Request, res: Response): Promise<void> {
   const now = new Date();
   const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const { workspaceId } = req.query;
+
+  const where: any = {
+    expiryDate: { not: null, lte: thirtyDays, gte: now },
+    status: { not: "DECOMMISSIONED" },
+  };
+
+  if (workspaceId && typeof workspaceId === "string") {
+    where.workspaceId = workspaceId;
+  }
 
   const servers = await prisma.server.findMany({
-    where: {
-      expiryDate: { not: null, lte: thirtyDays, gte: now },
-      status: { not: "DECOMMISSIONED" },
-    },
+    where,
     orderBy: { expiryDate: "asc" },
     include: {
       client: { select: { id: true, name: true } },

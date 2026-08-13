@@ -106,6 +106,82 @@ export async function seedInitialDataIfEmpty() {
     const pm = await prisma.user.findFirst({ where: { role: "PROJECT_MANAGER" } });
     const pmId = pm ? pm.id : null;
 
+    // Seed Workspaces if empty
+    const workspacesCount = await prisma.workspace.count();
+    if (workspacesCount === 0) {
+      console.log("[Seed] Creating default workspaces...");
+      await prisma.workspace.createMany({
+        data: [
+          {
+            displayName: "Edunura Technologies",
+            shortCode: "EDN",
+            legalName: "Edunura Technologies Pvt. Ltd.",
+            contactEmail: "billing@edunura.com",
+            defaultCurrency: "INR",
+            invoicePrefix: "EDN/2026/",
+            estimatePrefix: "EDN/EST/2026/",
+            poPrefix: "EDN/PO/2026/",
+            activeClients: 0
+          },
+          {
+            displayName: "Brand Forge Creative",
+            shortCode: "BFC",
+            legalName: "Brand Forge Creative Services",
+            contactEmail: "hello@brandforge.com",
+            defaultCurrency: "USD",
+            invoicePrefix: "BFC-INV-",
+            estimatePrefix: "BFC-EST-",
+            poPrefix: "BFC-PO-",
+            activeClients: 0
+          }
+        ]
+      });
+      console.log("[Seed] Default workspaces created.");
+    }
+
+    // Auto-assign orphaned data (Clients, Projects, etc. with workspaceId = null) to Edunura
+    const edunura = await prisma.workspace.findFirst({
+      where: { shortCode: "EDN" }
+    });
+
+    if (edunura) {
+      const edunuraId = edunura.id;
+      console.log(`[Seed] Fixing orphaned data to workspace ${edunuraId}...`);
+      await prisma.client.updateMany({
+        where: { workspaceId: null },
+        data: { workspaceId: edunuraId }
+      });
+      await prisma.project.updateMany({
+        where: { workspaceId: null },
+        data: { workspaceId: edunuraId }
+      });
+      await prisma.server.updateMany({
+        where: { workspaceId: null },
+        data: { workspaceId: edunuraId }
+      });
+      await prisma.domain.updateMany({
+        where: { workspaceId: null },
+        data: { workspaceId: edunuraId }
+      });
+      await prisma.financeRecord.updateMany({
+        where: { workspaceId: null },
+        data: { workspaceId: edunuraId }
+      });
+      await prisma.maintenanceRecord.updateMany({
+        where: { workspaceId: null },
+        data: { workspaceId: edunuraId }
+      });
+
+      // Update the workspace client count
+      const activeClientsCount = await prisma.client.count({
+        where: { workspaceId: edunuraId }
+      });
+      await prisma.workspace.update({
+        where: { id: edunuraId },
+        data: { activeClients: activeClientsCount }
+      });
+    }
+
     const clients = await prisma.client.findMany({ include: { projects: true } });
     for (const client of clients) {
       if (client.projects.length === 0) {
@@ -119,6 +195,7 @@ export async function seedInitialDataIfEmpty() {
             status: "IN_PROGRESS",
             clientId: client.id,
             managerId: pmId,
+            workspaceId: client.workspaceId,
           },
         });
         const proj2 = await prisma.project.create({
@@ -130,6 +207,7 @@ export async function seedInitialDataIfEmpty() {
             status: "PLANNING",
             clientId: client.id,
             managerId: pmId,
+            workspaceId: client.workspaceId,
           },
         });
         console.log(`[Seed] Created projects: ${proj1.name}, ${proj2.name}`);

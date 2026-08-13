@@ -9,8 +9,12 @@ export async function listClients(req: Request, res: Response): Promise<void> {
   const pageSize = Math.max(1, Math.min(1000, parseInt(req.query.pageSize as string, 10) || 10));
   const search = typeof req.query.search === "string" ? req.query.search : "";
   const status = typeof req.query.status === "string" ? req.query.status : "";
+  const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : "";
 
   const where: Record<string, unknown> = {};
+  if (workspaceId && workspaceId !== "all") {
+    where.workspaceId = workspaceId;
+  }
   if (search) {
     where.OR = [
       { name: { contains: search } },
@@ -39,7 +43,7 @@ export async function listClients(req: Request, res: Response): Promise<void> {
               technology: true,
               status: true,
               billing: { select: { amount: true } },
-              assets: { select: { id: true } },
+              assets: true,
             },
           },
           servers: {
@@ -66,7 +70,7 @@ export async function listClients(req: Request, res: Response): Promise<void> {
               technology: true,
               status: true,
               billing: { select: { amount: true } },
-              assets: { select: { id: true } },
+              assets: true,
             },
           },
           servers: {
@@ -98,7 +102,18 @@ export async function listClients(req: Request, res: Response): Promise<void> {
         p.technology.split(",").map((t: string) => t.trim()).filter(Boolean).forEach((t: string) => techSet.add(t));
       }
       p.billing?.forEach((b: any) => { totalBilling += Number(b.amount); });
-      if (p.assets) assetCount++;
+      if (p.assets) {
+        if (p.assets.gitRepo) assetCount++;
+        if (p.assets.productionUrl) assetCount++;
+        if (p.assets.stagingUrl) assetCount++;
+        if (p.assets.documentation) assetCount++;
+        if (p.assets.database) assetCount++;
+        if (p.assets.apiCollection) assetCount++;
+        if (p.assets.designFiles) assetCount++;
+        if (Array.isArray(p.assets.customAssets)) {
+          assetCount += p.assets.customAssets.length;
+        }
+      }
       if (p.status !== "COMPLETED" && p.status !== "ARCHIVED") activeServices++;
     });
 
@@ -126,6 +141,7 @@ export async function listClients(req: Request, res: Response): Promise<void> {
       address: client.address,
       status: client.status,
       notes: client.notes,
+      retainer: client.retainer,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt,
       _count: client._count,
@@ -155,7 +171,7 @@ export async function getClient(req: Request, res: Response): Promise<void> {
         projects: { select: { id: true, name: true, status: true, technology: true, createdAt: true, startDate: true } },
         servers: { select: { id: true, name: true, provider: true, status: true, expiryDate: true, ipAddress: true, renewalCost: true } },
         domains: { select: { id: true, domain: true, registrar: true, expirationDate: true, sslExpiration: true, autoRenewal: true, renewalCost: true } },
-        shortUrls: { select: { id: true, shortCode: true, originalUrl: true, alias: true, clickCount: true, category: true, status: true, expiryDate: true, createdAt: true } },
+        shortUrls: { select: { id: true, shortCode: true, originalUrl: true, alias: true, clickCount: true, category: true, status: true, createdAt: true } },
         qrCodes: { select: { id: true, name: true, type: true, content: true, rawContent: true, format: true, size: true, foregroundColor: true, backgroundColor: true, status: true, tags: true, createdAt: true } },
         _count: { select: { projects: true, servers: true, domains: true, shortUrls: true, qrCodes: true } },
       },
@@ -167,7 +183,7 @@ export async function getClient(req: Request, res: Response): Promise<void> {
         projects: { select: { id: true, name: true, status: true, technology: true, createdAt: true, startDate: true } },
         servers: { select: { id: true, name: true, provider: true, status: true, expiryDate: true, ipAddress: true, renewalCost: true } },
         domains: { select: { id: true, domain: true, registrar: true, expirationDate: true, sslExpiration: true, autoRenewal: true, renewalCost: true } },
-        shortUrls: { select: { id: true, shortCode: true, originalUrl: true, alias: true, clickCount: true, category: true, status: true, expiryDate: true, createdAt: true } },
+        shortUrls: { select: { id: true, shortCode: true, originalUrl: true, alias: true, clickCount: true, category: true, status: true, createdAt: true } },
         _count: { select: { projects: true, servers: true, domains: true, shortUrls: true } },
       },
     });
@@ -211,6 +227,13 @@ export async function createClient(req: Request, res: Response): Promise<void> {
   if (existing) throw createError(409, "Client with this email already exists");
 
   const client = await prisma.client.create({ data: req.body });
+
+  if (client.workspaceId) {
+    await prisma.workspace.update({
+      where: { id: client.workspaceId },
+      data: { activeClients: { increment: 1 } }
+    }).catch(() => {});
+  }
 
   await logAudit({
     userId: req.user!.userId,
@@ -256,13 +279,23 @@ export async function deleteClient(req: Request, res: Response): Promise<void> {
     prisma.billing.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.credential.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.asset.deleteMany({ where: { projectId: { in: projectIds } } }),
+    prisma.financeRecord.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.project.deleteMany({ where: { clientId: id } }),
     prisma.clickLog.deleteMany({ where: { urlId: { in: urlIds } } }),
     prisma.shortUrl.deleteMany({ where: { clientId: id } }),
+    prisma.qrCode.deleteMany({ where: { clientId: id } }),
+    prisma.maintenanceRecord.deleteMany({ where: { clientId: id } }),
     prisma.server.updateMany({ where: { clientId: id }, data: { clientId: null } }),
     prisma.domain.updateMany({ where: { clientId: id }, data: { clientId: null } }),
     prisma.client.delete({ where: { id } }),
   ]);
+
+  if (client.workspaceId) {
+    await prisma.workspace.update({
+      where: { id: client.workspaceId },
+      data: { activeClients: { decrement: 1 } }
+    }).catch(() => {});
+  }
 
   await logAudit({
     userId: req.user!.userId,
@@ -275,8 +308,15 @@ export async function deleteClient(req: Request, res: Response): Promise<void> {
   res.json({ success: true, data: { message: "Client deleted" } });
 }
 
-export async function getClientOptions(_req: Request, res: Response): Promise<void> {
+export async function getClientOptions(req: Request, res: Response): Promise<void> {
+  const { workspaceId } = req.query;
+  const where: any = {};
+  if (workspaceId && typeof workspaceId === "string") {
+    where.workspaceId = workspaceId;
+  }
+
   const clients = await prisma.client.findMany({
+    where,
     select: {
       id: true,
       name: true,

@@ -8,6 +8,9 @@ export const createClientSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
+  retainer: z.number().optional(),
+  accountManagerLead: z.string().optional(),
+  workspaceId: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -19,5 +22,8 @@ export const updateClientSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
+  retainer: z.number().optional(),
+  accountManagerLead: z.string().optional(),
+  workspaceId: z.string().optional(),
   notes: z.string().optional(),
 });

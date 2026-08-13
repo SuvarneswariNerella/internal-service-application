@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { clientsApi, type Client } from "@/api/clients";
 import { useToastStore } from "@/store/toastStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 const INDUSTRIES = [
   "Technology & SaaS",
@@ -123,6 +124,7 @@ export default function ClientFormModal({
   onSuccess,
 }: ClientFormModalProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
@@ -142,6 +144,7 @@ export default function ClientFormModal({
     contactEmail: "",
     billingEmail: "",
     phone: "",
+    accountManagerLead: "",
   });
 
   const [customIndustry, setCustomIndustry] = useState("");
@@ -181,7 +184,7 @@ export default function ClientFormModal({
         name: client.name || "",
         industry: isStandardInd ? rawIndustry : rawIndustry ? "Other" : "",
         legalEntityName: legalMatch?.[1] ? legalMatch[1].trim() : client.company || "",
-        mrr: mrrMatch?.[1] ? mrrMatch[1].replace(/[^0-9]/g, "") : "",
+        mrr: client.retainer ? String(client.retainer) : mrrMatch?.[1] ? mrrMatch[1].replace(/[^0-9]/g, "") : "",
         gstin: gstinMatch?.[1] ? gstinMatch[1].trim() : "",
         state: isStandardSt ? rawState : rawState ? "Other" : "Maharashtra",
         streetAddress: addrParts[0] || "",
@@ -192,6 +195,7 @@ export default function ClientFormModal({
         contactEmail: client.email || "",
         billingEmail: billingEmailMatch?.[1] ? billingEmailMatch[1].trim() : "",
         phone: rawPhone,
+        accountManagerLead: client.accountManagerLead || "",
       });
 
       if (!isStandardInd && rawIndustry) {
@@ -261,6 +265,9 @@ export default function ClientFormModal({
           .filter(Boolean)
           .join(", "),
         status: client?.status || "ACTIVE",
+        retainer: form.mrr ? Number(form.mrr) : 0,
+        accountManagerLead: form.accountManagerLead,
+        workspaceId: globalWorkspaceId !== "all" ? globalWorkspaceId : undefined,
         notes: [
           finalIndustry && `Industry: ${finalIndustry}`,
           form.legalEntityName && `Legal Entity: ${form.legalEntityName}`,
@@ -656,6 +663,24 @@ export default function ClientFormModal({
                   placeholder="Enter phone number"
                   value={form.phone}
                   onChange={(e) => set("phone", e.target.value.replace(/[^0-9\s-]/g, ""))}
+                />
+              </InputBox>
+            </FormField>
+          </div>
+
+          {/* Row 6: Account Manager Lead */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <FormField label="Account Manager Lead">
+              <InputBox
+                badge={<User className="w-3.5 h-3.5" />}
+                badgeBg="bg-blue-50 text-blue-600 border-blue-100"
+              >
+                <input
+                  type="text"
+                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
+                  placeholder="Enter account manager lead"
+                  value={form.accountManagerLead}
+                  onChange={(e) => set("accountManagerLead", e.target.value)}
                 />
               </InputBox>
             </FormField>

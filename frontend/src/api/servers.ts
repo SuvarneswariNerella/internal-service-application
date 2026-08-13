@@ -20,7 +20,7 @@ export interface Server {
 }
 
 export const serversApi = {
-  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string; clientId?: string; projectId?: string }) =>
+  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string; clientId?: string; projectId?: string; workspaceId?: string }) =>
     api.get<ApiResponse<Server[]>>("/servers", { params }),
 
   get: (id: string) => api.get<ApiResponse<Server>>(`/servers/${id}`),
@@ -31,5 +31,5 @@ export const serversApi = {
 
   delete: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/servers/${id}`),
 
-  getExpiring: () => api.get<ApiResponse<Server[]>>("/servers/expiring"),
+  getExpiring: (params?: { workspaceId?: string }) => api.get<ApiResponse<Server[]>>("/servers/expiring", { params }),
 };

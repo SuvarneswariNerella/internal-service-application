@@ -6,18 +6,13 @@ export interface ShortUrl {
   originalUrl: string;
   shortCode: string;
   alias: string | null;
-  expiryDate: string | null;
   clickCount: number;
   clientId: string | null;
   client?: { id: string; name: string; company?: string };
   projectId?: string | null;
   project?: { id: string; name: string };
   category?: string | null;
-  domainId?: string | null;
-  domain?: { id: string; domain: string };
   passwordHash?: string | null;
-  maxClicks?: number | null;
-  redirectType: "301" | "302";
   status: "ACTIVE" | "PAUSED" | "EXPIRED";
   tags?: string | null;
   notes?: string | null;
@@ -27,6 +22,7 @@ export interface ShortUrl {
   updatedAt?: string;
   _count?: { clicks: number };
   clicks?: { id: string; ip: string; userAgent: string; referer: string; clickedAt: string }[];
+  qrCodes?: { id: string; content: string; qrData?: string }[];
 }
 
 export interface UrlStats {
@@ -41,7 +37,7 @@ export interface UrlStats {
 }
 
 export const urlsApi = {
-  list: (params?: { page?: number; pageSize?: number; search?: string; clientId?: string; projectId?: string; status?: string }) =>
+  list: (params?: { page?: number; pageSize?: number; search?: string; clientId?: string; projectId?: string; status?: string; workspaceId?: string }) =>
     api.get<ApiResponse<ShortUrl[]>>("/urls", { params }),
 
   getById: (id: string) =>

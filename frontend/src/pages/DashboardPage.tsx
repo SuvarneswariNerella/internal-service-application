@@ -6,7 +6,7 @@ import {
   Globe,
   Server,
   ArrowRight,
-  DollarSign,
+  IndianRupee,
   Link2,
   Plus,
   TrendingUp,
@@ -28,8 +28,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area,
 } from "recharts";
 import PageWrapper from "@/components/ui/PageWrapper";
 import { Card, CardHeader, CardContent } from "@/components/ui/Card";
@@ -38,6 +36,7 @@ import Button from "@/components/ui/Button";
 import { dashboardApi, type DashboardStats } from "@/api/dashboard";
 import { serversApi, type Server as ServerType } from "@/api/servers";
 import { domainsApi, type Domain } from "@/api/domains";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 const STATUS_COLORS: Record<string, string> = {
   IN_PROGRESS: "#3b82f6", // Blue
@@ -105,6 +104,7 @@ function MetricCard({
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [expiringServers, setExpiringServers] = useState<ServerType[]>([]);
   const [expiringDomains, setExpiringDomains] = useState<Domain[]>([]);
@@ -114,10 +114,11 @@ export default function DashboardPage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        const wsId = globalWorkspaceId === "all" ? undefined : globalWorkspaceId;
         const [statsRes, serversRes, domainsRes] = await Promise.all([
-          dashboardApi.getStats(),
-          serversApi.getExpiring(),
-          domainsApi.getExpiring(),
+          dashboardApi.getStats({ workspaceId: wsId }),
+          serversApi.getExpiring({ workspaceId: wsId }),
+          domainsApi.getExpiring({ workspaceId: wsId }),
         ]);
         if (statsRes.data.data) setStats(statsRes.data.data);
         if (serversRes.data.data) setExpiringServers(serversRes.data.data);
@@ -129,7 +130,7 @@ export default function DashboardPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [globalWorkspaceId]);
 
   // Format Project Status data for Pie/Donut Chart
   const projectStatusData =
@@ -256,10 +257,10 @@ export default function DashboardPage() {
             linkTo="/urls"
           />
           <MetricCard
-            title="Pending Billing"
-            value={`$${stats?.pendingBilling.totalAmount.toLocaleString() ?? "0"}`}
-            subtext={`${stats?.pendingBilling.count ?? 0} pending invoices`}
-            icon={DollarSign}
+            title="Overdue Billing"
+            value={`₹${stats?.pendingBilling.totalAmount.toLocaleString() ?? "0"}`}
+            subtext={`${stats?.pendingBilling.count ?? 0} overdue invoices`}
+            icon={IndianRupee}
             gradientBg="bg-rose-50 border-rose-100"
             iconColor="text-rose-600"
           />
@@ -411,13 +412,7 @@ export default function DashboardPage() {
           <CardContent className="pt-4">
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={urlTrafficData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="urlGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0284c7" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0284c7" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={urlTrafficData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
@@ -436,8 +431,8 @@ export default function DashboardPage() {
                       return null;
                     }}
                   />
-                  <Area type="monotone" dataKey="clicks" stroke="#0284c7" strokeWidth={2.5} fillOpacity={1} fill="url(#urlGradient)" />
-                </AreaChart>
+                  <Bar dataKey="clicks" fill="#0ea5e9" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>

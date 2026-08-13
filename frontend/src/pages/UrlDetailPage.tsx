@@ -34,10 +34,8 @@ export default function UrlDetailPage() {
       originalUrl: urlId === "u2" ? "https://admin.techstart.io/login" : "https://dribbble.com/",
       alias: urlId === "u2" ? "ts.io/admin" : "drum.com",
       clickCount: 142,
-      expiryDate: null,
       clientId: "c1",
       client: { id: "c1", name: "Apex Clound Tech" },
-      redirectType: "302",
       status: "ACTIVE",
       createdAt: new Date().toISOString(),
       clicks: [],
@@ -75,7 +73,7 @@ export default function UrlDetailPage() {
 
   const activeStats = stats || getFallbackUrlStats(id);
   const { url, stats: s } = activeStats;
-  const shortUrlString = `${window.location.origin}/s/${url.shortCode}`;
+  const shortUrlString = `${window.location.origin}/s/${url.alias || url.shortCode}`;
 
   const handleCopyShortUrl = () => {
     navigator.clipboard.writeText(shortUrlString);
@@ -114,7 +112,7 @@ export default function UrlDetailPage() {
             </div>
             <p className="text-xs text-gray-500 mt-1 font-medium flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-blue-500" />
-              Short Link Analytics • HTTP {url.redirectType || "302"} Redirect
+              Short Link Analytics
             </p>
           </div>
         </div>
@@ -267,25 +265,10 @@ export default function UrlDetailPage() {
                     </div>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Redirect Code
-                  </label>
-                  <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold text-gray-800">
-                    {url.redirectType || "302"} (Temporary Redirect)
-                  </div>
-                </div>
               </div>
 
               {/* Expiry & Created Dates */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase block">Expiration Date</span>
-                  <span className="text-xs font-semibold text-gray-800">
-                    {url.expiryDate ? new Date(url.expiryDate).toLocaleDateString() : "Never Expires"}
-                  </span>
-                </div>
+              <div className="grid grid-cols-1 gap-3">
                 <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
                   <span className="text-[10px] font-bold text-gray-400 uppercase block">Created Date</span>
                   <span className="text-xs font-semibold text-gray-800">

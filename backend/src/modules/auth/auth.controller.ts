@@ -5,6 +5,11 @@ import prisma from "@/config/db";
 import { config } from "@/config";
 import { createError } from "@/middleware/errorHandler";
 import { logAudit, logLogin } from "@/utils/audit";
+import { authenticator } from "otplib";
+import QRCode from "qrcode";
+
+// Allow a window of 1 (30 seconds before and after) to account for clock drift
+authenticator.options = { window: 1 };
 
 function generateTokens(user: { id: string; email: string; role: string }) {
   const accessToken = jwt.sign(
@@ -141,4 +146,55 @@ export async function me(req: Request, res: Response): Promise<void> {
   }
 
   res.json({ success: true, data: user });
+}
+
+export async function generateTotp(req: Request, res: Response): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) {
+    throw createError(404, "User not found");
+  }
+
+  const secret = authenticator.generateSecret();
+  const otpauth = authenticator.keyuri(user.email, "InternalService", secret);
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauth);
+
+  res.json({
+    success: true,
+    data: {
+      secret,
+      qrCodeDataUrl,
+    },
+  });
+}
+
+export async function verifyTotp(req: Request, res: Response): Promise<void> {
+  const { token, secret } = req.body;
+
+  if (!token || !secret) {
+    throw createError(400, "Token and secret are required");
+  }
+
+  const isValid = authenticator.check(token, secret);
+
+  if (!isValid) {
+    throw createError(400, "Invalid verification code");
+  }
+
+  await prisma.user.update({
+    where: { id: req.user!.userId },
+    // @ts-ignore - Prisma Client generation caching issue
+    data: {
+      totpSecret: secret,
+      isTotpEnabled: true,
+    },
+  });
+
+  res.json({
+    success: true,
+    message: "TOTP 2FA enabled successfully",
+  });
 }

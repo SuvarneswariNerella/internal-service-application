@@ -47,7 +47,7 @@ import { projectsApi, type Project, type Asset } from "@/api/projects";
 import { credentialsApi } from "@/api/credentials";
 import { serversApi, type Server } from "@/api/servers";
 import { domainsApi, type Domain } from "@/api/domains";
-import { urlsApi, type ShortUrl } from "@/api/urls";
+
 import { financeApi, type FinanceRecord } from "@/api/finance";
 
 
@@ -168,7 +168,6 @@ export default function ProjectDetailPage() {
   const [showAssetsModal, setShowAssetsModal] = useState(false);
   const [linkedServers, setLinkedServers] = useState<Server[]>([]);
   const [linkedDomains, setLinkedDomains] = useState<Domain[]>([]);
-  const [linkedUrls, setLinkedUrls] = useState<ShortUrl[]>([]);
   const [projectFinanceRecords, setProjectFinanceRecords] = useState<FinanceRecord[]>([]);
 
   const fetchProject = async () => {
@@ -197,13 +196,11 @@ export default function ProjectDetailPage() {
       Promise.all([
         serversApi.list({ projectId: pId, clientId: cId || undefined, pageSize: 1000 }).catch(() => ({ data: { data: [] } })),
         domainsApi.list({ projectId: pId, clientId: cId || undefined, pageSize: 1000 }).catch(() => ({ data: { data: [] } })),
-        urlsApi.list({ projectId: pId, pageSize: 1000 }).catch(() => ({ data: { data: [] } })),
         financeApi.list({ projectId: pId }).catch(() => ({ data: { data: [] } })),
       ])
-        .then(([serversRes, domainsRes, urlsRes, financeRes]) => {
+        .then(([serversRes, domainsRes, financeRes]) => {
           setLinkedServers(serversRes.data?.data || []);
           setLinkedDomains(domainsRes.data?.data || []);
-          setLinkedUrls(urlsRes.data?.data || []);
           setProjectFinanceRecords(financeRes.data?.data || []);
         });
     }
@@ -645,7 +642,7 @@ export default function ProjectDetailPage() {
             </CardHeader>
 
             <CardContent className="p-6 space-y-6">
-              {coreAssets.length === 0 && linkedServers.length === 0 && linkedDomains.length === 0 && linkedUrls.length === 0 ? (
+              {coreAssets.length === 0 && linkedServers.length === 0 && linkedDomains.length === 0 ? (
                 <div className="p-8 rounded-xl border border-dashed border-gray-200 text-center bg-gray-50/50">
                   <p className="text-xs text-gray-500 font-medium">No assets configured for this project.</p>
                 </div>
@@ -831,44 +828,6 @@ export default function ProjectDetailPage() {
                     </div>
                   )}
 
-                  {/* Section 4: Short URLs & Routing Endpoints */}
-                  {linkedUrls.length > 0 && (
-                    <div>
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                          <Link2 className="w-3.5 h-3.5 text-sky-600" /> Dynamic Short URLs & Tracking Links ({linkedUrls.length})
-                        </h4>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {linkedUrls.map((url) => (
-                          <div
-                            key={url.id}
-                            className="p-4 rounded-xl border border-gray-200/80 bg-white hover:border-sky-300 hover:shadow-md transition-all flex flex-col justify-between"
-                          >
-                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-                              <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                                /{url.shortCode}
-                              </span>
-                              <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
-                                {url.clickCount || 0} Total Clicks
-                              </span>
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target Destination</p>
-                              <a
-                                href={url.originalUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs font-semibold text-gray-800 hover:text-indigo-600 truncate block mt-0.5"
-                              >
-                                {url.originalUrl}
-                              </a>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </CardContent>
@@ -1034,7 +993,7 @@ export default function ProjectDetailPage() {
                           </span>
                         </td>
                         <td className="p-4 font-mono font-bold text-gray-900">
-                          ${Number(record.amount).toLocaleString()}
+                          ₹{Number(record.amount).toLocaleString()}
                         </td>
                         <td className="p-4">
                           <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border

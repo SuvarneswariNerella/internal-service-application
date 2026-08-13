@@ -13,7 +13,6 @@ import {
   Star,
   Clock,
   KeyRound,
-  CreditCard,
   Eye,
   FolderOpen,
 } from "lucide-react";
@@ -27,6 +26,7 @@ import ClientFormModal from "@/components/ClientFormModal";
 import { cn } from "@/utils/cn";
 import { clientsApi, type Client } from "@/api/clients";
 import type { PaginationMeta } from "@/types";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 function getInitials(name: string): string {
   return name
@@ -134,7 +134,7 @@ function ClientCard({ client }: { client: Client }) {
           >
             <p className="text-[9px] font-medium text-gray-500 uppercase tracking-wider mb-0.5 group-hover/kpi:text-blue-600">Retainer Value</p>
             <div className="flex items-baseline gap-0.5">
-              <span className="text-base font-bold text-gray-900 group-hover/kpi:text-blue-700">₹{(client.totalBilling ?? 0).toLocaleString("en-IN")}</span>
+              <span className="text-base font-bold text-gray-900 group-hover/kpi:text-blue-700">₹{(client.retainer ?? 0).toLocaleString("en-IN")}</span>
               <span className="text-[9px] text-gray-500">/mo</span>
             </div>
           </div>
@@ -230,10 +230,10 @@ function ClientCard({ client }: { client: Client }) {
         </div>
       </div>
 
-      {/* Action Buttons: View Profile, Credentials, Billing (Edit Client removed) */}
+      {/* Action Buttons: View Profile, Credentials (Edit Client removed) */}
       <div className="mt-auto">
         <FadeDivider />
-        <div className="grid grid-cols-3 divide-x divide-gray-100">
+        <div className="grid grid-cols-2 divide-x divide-gray-100">
           <button
             onClick={() => navigate(`/clients/${client.id}`)}
             className="flex flex-col items-center gap-0.5 py-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
@@ -247,13 +247,6 @@ function ClientCard({ client }: { client: Client }) {
           >
             <KeyRound className="w-3.5 h-3.5" />
             <span className="text-[9px] font-medium">Credentials</span>
-          </button>
-          <button
-            onClick={() => navigate(`/clients/${client.id}`)}
-            className="flex flex-col items-center gap-0.5 py-2.5 text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">Billing</span>
           </button>
         </div>
       </div>
@@ -269,11 +262,18 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const { globalWorkspaceId } = useWorkspaceStore();
 
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      const res = await clientsApi.list({ page, pageSize: 12, search, status: statusFilter });
+      const res = await clientsApi.list({ 
+        page, 
+        pageSize: 12, 
+        search, 
+        status: statusFilter,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId 
+      });
       if (res.data.success && res.data.data) {
         setClients(res.data.data);
         if (res.data.pagination) setPagination(res.data.pagination);
@@ -290,20 +290,28 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients();
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, globalWorkspaceId]);
 
   return (
     <PageWrapper>
       <PageHeader
         title="Clients"
-        description="Manage your client information"
+        description="Manage your clients, their contact information, and account status."
+        icon={<Building2 className="w-5 h-5" />}
         action={
-          <Link to="/clients/new">
-            <Button>
+          !globalWorkspaceId ? (
+            <Button disabled className="opacity-50 cursor-not-allowed">
               <Plus className="w-4 h-4 mr-2" />
-              Add Client
+              Loading Workspace...
             </Button>
-          </Link>
+          ) : (
+            <Link to="/clients/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Client
+              </Button>
+            </Link>
+          )
         }
       />
 

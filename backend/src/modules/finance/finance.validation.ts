@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const financeRecordSchema = z.object({
-  projectId: z.string().uuid("Invalid project ID"),
+  projectId: z.string().uuid("Invalid project ID").optional().nullable().or(z.literal("")),
+  clientId: z.string().uuid("Invalid client ID").optional().nullable().or(z.literal("")),
   type: z.string().min(1, "Type is required"),
   title: z.string().min(1, "Title is required"),
   amount: z.number().min(0, "Amount must be a positive number"),
@@ -11,6 +12,8 @@ export const financeRecordSchema = z.object({
   paidDate: z.string().optional().nullable(),
   fileUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  metadata: z.any().optional().nullable(),
+  workspaceId: z.string().nullable().optional(),
 });
 
 export const updateFinanceRecordSchema = financeRecordSchema.partial();

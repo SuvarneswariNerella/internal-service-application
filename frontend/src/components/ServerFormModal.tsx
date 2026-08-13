@@ -16,6 +16,7 @@ import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
 import { serversApi, type Server as ServerType } from "@/api/servers";
 import { useToastStore } from "@/store/toastStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 const SERVER_STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Active" },
@@ -91,6 +92,7 @@ export default function ServerFormModal({
   onSuccess,
 }: ServerFormModalProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -114,13 +116,16 @@ export default function ServerFormModal({
   useEffect(() => {
     if (isOpen) {
       clientsApi
-        .getOptions()
+        .getOptions({ workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId })
         .then((res) => {
           if (res.data?.success && res.data?.data) {
             setClients(res.data.data as any);
           }
         })
-        .catch(() => clientsApi.list({ pageSize: 1000 }))
+        .catch(() => clientsApi.list({ 
+          pageSize: 1000,
+          workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+        }))
         .then((res: any) => {
           if (res?.data?.success && res?.data?.data) {
             setClients(res.data.data);
@@ -246,6 +251,7 @@ export default function ServerFormModal({
         status: form.status,
         clientId: form.clientId || undefined,
         projectId: form.projectId || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
       };
 
       if (isEdit && server?.id) {

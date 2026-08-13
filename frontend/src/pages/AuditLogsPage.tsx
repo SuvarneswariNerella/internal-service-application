@@ -62,7 +62,7 @@ export default function AuditLogsPage() {
 
   return (
     <PageWrapper>
-      <PageHeader title="Audit Logs" description="Track all system activities and login history" />
+      <PageHeader title="Audit Logs" icon={<Shield className="w-6 h-6" />} description="Track all system activities and login history" />
 
       <div className="flex gap-2 mb-6">
         <Button variant={activeTab === "audit" ? "primary" : "secondary"} onClick={() => { setActiveTab("audit"); setPage(1); }}>

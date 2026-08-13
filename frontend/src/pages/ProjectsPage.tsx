@@ -11,6 +11,7 @@ import ProjectFormModal from "@/components/ProjectFormModal";
 import { projectsApi, type Project } from "@/api/projects";
 import { clientsApi, type Client } from "@/api/clients";
 import type { PaginationMeta } from "@/types";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -26,14 +27,18 @@ export default function ProjectsPage() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const { globalWorkspaceId } = useWorkspaceStore();
 
   useEffect(() => {
-    clientsApi.list({ pageSize: 100 }).then((res) => {
+    clientsApi.list({ 
+      pageSize: 100,
+      workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+    }).then((res) => {
       if (res.data.success && res.data.data) {
         setClients(res.data.data);
       }
     }).catch(console.error);
-  }, []);
+  }, [globalWorkspaceId]);
 
   useEffect(() => {
     setSelectedClientId(clientIdParam);
@@ -58,6 +63,7 @@ export default function ProjectsPage() {
         search,
         status: statusFilter,
         clientId: selectedClientId || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
       });
       if (res.data.success && res.data.data) {
         setProjects(res.data.data);
@@ -72,13 +78,14 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
-  }, [page, search, statusFilter, selectedClientId]);
+  }, [page, search, statusFilter, selectedClientId, globalWorkspaceId]);
 
   return (
     <PageWrapper>
       <PageHeader
         title="Projects"
         description="Manage your projects across all clients and internal operations"
+        icon={<FolderKanban className="w-5 h-5" />}
         action={
           <Button onClick={() => setIsAddOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />

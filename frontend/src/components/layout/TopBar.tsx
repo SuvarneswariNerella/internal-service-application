@@ -3,7 +3,7 @@ import { Menu, LogOut, Search, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useNavigate, Link } from "react-router-dom";
 import { searchApi, type SearchResult } from "@/api/search";
-
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 interface TopBarProps {
   onMenuClick: () => void;
 }
@@ -76,9 +76,14 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30">
-      <button onClick={onMenuClick} className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden">
-        <Menu className="w-5 h-5 text-gray-600" />
-      </button>
+      <div className="flex items-center gap-4">
+        <button onClick={onMenuClick} className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden">
+          <Menu className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="hidden lg:block">
+          <WorkspaceSwitcher />
+        </div>
+      </div>
 
       <div className="flex-1 max-w-xl mx-4 relative" ref={dropdownRef}>
         <button

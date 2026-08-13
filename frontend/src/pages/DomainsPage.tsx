@@ -24,6 +24,7 @@ import { domainsApi, type Domain } from "@/api/domains";
 import { clientsApi, type Client } from "@/api/clients";
 import { projectsApi, type Project } from "@/api/projects";
 import type { PaginationMeta } from "@/types";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { cn } from "@/utils/cn";
 
 function getDaysUntil(dateStr: string | undefined): number | null {
@@ -255,11 +256,15 @@ export default function DomainsPage() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
 
   useEffect(() => {
     clientsApi
-      .list({ pageSize: 100 })
+      .list({ 
+        pageSize: 100,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+      })
       .then((res) => {
         if (res.data.success && res.data.data) {
           setClients(res.data.data);
@@ -268,14 +273,17 @@ export default function DomainsPage() {
       .catch(console.error);
 
     projectsApi
-      .list({ pageSize: 1000 })
+      .list({ 
+        pageSize: 1000,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+      })
       .then((res) => {
         if (res.data.success && res.data.data) {
           setProjects(res.data.data);
         }
       })
       .catch(console.error);
-  }, []);
+  }, [globalWorkspaceId]);
 
   useEffect(() => {
     setSelectedClientId(clientIdParam);
@@ -316,6 +324,7 @@ export default function DomainsPage() {
         search,
         clientId: selectedClientId || undefined,
         projectId: selectedProjectId || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
       });
       if (res.data.success && res.data.data) {
         setDomains(res.data.data);
@@ -330,13 +339,14 @@ export default function DomainsPage() {
 
   useEffect(() => {
     fetchDomains();
-  }, [page, search, selectedClientId, selectedProjectId]);
+  }, [page, search, selectedClientId, selectedProjectId, globalWorkspaceId]);
 
   return (
     <PageWrapper>
       <PageHeader
         title="Domains"
         description="Manage your domain names across all clients and application services"
+        icon={<Globe className="w-5 h-5" />}
         action={
           <Button onClick={() => setIsAddOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />

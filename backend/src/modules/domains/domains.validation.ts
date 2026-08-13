@@ -11,6 +11,7 @@ export const createDomainSchema = z.object({
   autoRenewal: z.boolean().optional(),
   clientId: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  workspaceId: z.string().optional().nullable(),
 });
 
 export const updateDomainSchema = z.object({
@@ -24,4 +25,5 @@ export const updateDomainSchema = z.object({
   autoRenewal: z.boolean().optional(),
   clientId: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  workspaceId: z.string().optional().nullable(),
 });

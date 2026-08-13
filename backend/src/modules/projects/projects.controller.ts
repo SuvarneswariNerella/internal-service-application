@@ -9,6 +9,7 @@ export async function listProjects(req: Request, res: Response): Promise<void> {
   const search = (req.query.search as string) || "";
   const status = (req.query.status as string) || "";
   const clientId = (req.query.clientId as string) || "";
+  const workspaceId = (req.query.workspaceId as string) || "";
 
   const where: Record<string, unknown> = {};
   if (search) {
@@ -20,6 +21,7 @@ export async function listProjects(req: Request, res: Response): Promise<void> {
   }
   if (status) where.status = status;
   if (clientId) where.clientId = clientId;
+  if (workspaceId) where.workspaceId = workspaceId;
 
   const [projects, total] = await Promise.all([
     prisma.project.findMany({
@@ -27,7 +29,7 @@ export async function listProjects(req: Request, res: Response): Promise<void> {
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { createdAt: "desc" },
-      include: { client: { select: { id: true, name: true, company: true } } },
+      include: { client: { select: { id: true, name: true, company: true, address: true, notes: true, email: true } } },
     }),
     prisma.project.count({ where }),
   ]);
@@ -98,6 +100,7 @@ export async function createProject(req: Request, res: Response): Promise<void> 
       status: status || "PLANNING",
       clientId,
       managerId: managerId || null,
+      workspaceId: req.body.workspaceId || null,
     },
     include: { client: { select: { id: true, name: true } } },
   });
@@ -129,6 +132,7 @@ export async function updateProject(req: Request, res: Response): Promise<void> 
   if (status !== undefined) updateData.status = status;
   if (clientId !== undefined) updateData.clientId = clientId;
   if (managerId !== undefined) updateData.managerId = managerId || null;
+  if (req.body.workspaceId !== undefined) updateData.workspaceId = req.body.workspaceId || null;
 
   const updated = await prisma.project.update({
     where: { id },

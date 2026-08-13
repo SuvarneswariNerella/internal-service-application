@@ -1,57 +1,87 @@
 import { useState, useEffect } from "react";
-import { Bell, Server, Globe, CheckCheck, AlertTriangle, Clock, CheckCircle } from "lucide-react";
+import { Bell, Server, Globe, AlertTriangle, Clock, FolderKanban, Wrench, ArrowRight, CheckCircle } from "lucide-react";
 import PageWrapper from "@/components/ui/PageWrapper";
 import PageHeader from "@/components/ui/PageHeader";
-import Button from "@/components/ui/Button";
-import { Card, CardHeader, CardContent } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
-import { remindersApi, type Notification, type ExpiringItem } from "@/api/reminders";
-
-function UrgencyBadge({ urgency }: { urgency: string }) {
-  if (urgency === "critical") return <span className="text-xs px-2 py-0.5 rounded-full font-medium text-red-600 bg-red-50">Critical</span>;
-  if (urgency === "warning") return <span className="text-xs px-2 py-0.5 rounded-full font-medium text-amber-600 bg-amber-50">Warning</span>;
-  return <span className="text-xs px-2 py-0.5 rounded-full font-medium text-blue-600 bg-blue-50">Info</span>;
-}
+import { remindersApi, type Reminder } from "@/api/reminders";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export default function RemindersPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [expiring, setExpiring] = useState<ExpiringItem[]>([]);
-  const [expired, setExpired] = useState<ExpiringItem[]>([]);
-  const [stats, setStats] = useState({ expiringSoon30: 0, expiringSoon60: 0, expired: 0 });
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [stats, setStats] = useState({ expired: 0, in30: 0, in90: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"expiring" | "notifications">("expiring");
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const { globalWorkspaceId } = useWorkspaceStore();
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [notifRes, expiringRes] = await Promise.all([
-        remindersApi.getNotifications(),
-        remindersApi.getExpiring(),
+      const workspaceId = globalWorkspaceId === "all" ? undefined : globalWorkspaceId;
+      const typeParam = activeTab === "all" ? undefined : activeTab;
+      
+      const [remindersRes, summaryRes] = await Promise.all([
+        remindersApi.getReminders({ type: typeParam, workspaceId }),
+        remindersApi.getSummary({ workspaceId })
       ]);
-      if (notifRes.data.success && notifRes.data.data) setNotifications(notifRes.data.data);
-      if (expiringRes.data.success && expiringRes.data.data) {
-        setExpiring(expiringRes.data.data.expiring);
-        setExpired(expiringRes.data.data.expired);
-        setStats(expiringRes.data.data.stats);
+      
+      if (remindersRes.data.success && remindersRes.data.data) {
+        setReminders(remindersRes.data.data);
       }
-    } catch (err) { console.error(err); } finally { setIsLoading(false); }
+      if (summaryRes.data.success && summaryRes.data.data) {
+        setStats(summaryRes.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, [activeTab, globalWorkspaceId]);
 
-  const handleMarkAllRead = async () => {
-    await remindersApi.markAllAsRead();
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const getUrgencyColor = (days: number) => {
+    if (days < 0) return "text-red-600 bg-red-50 border-red-100";
+    if (days <= 30) return "text-amber-600 bg-amber-50 border-amber-100";
+    return "text-blue-600 bg-blue-50 border-blue-100";
   };
 
-  const handleDismiss = async (id: string) => {
-    await remindersApi.deleteNotification(id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const getUrgencyText = (days: number) => {
+    if (days < 0) return "Expired";
+    if (days === 0) return "Due Today";
+    return `${days} Days left`;
   };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "projects": return <FolderKanban className="w-4 h-4 text-purple-500" />;
+      case "servers": return <Server className="w-4 h-4 text-blue-500" />;
+      case "domains": return <Globe className="w-4 h-4 text-emerald-500" />;
+      case "maintenance": return <Wrench className="w-4 h-4 text-orange-500" />;
+      default: return <Bell className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const tabs = [
+    { id: "all", label: "All Items" },
+    { id: "projects", label: "Projects" },
+    { id: "servers", label: "Servers" },
+    { id: "domains", label: "Domains" },
+    { id: "maintenance", label: "Maintenance" },
+  ];
 
   return (
     <PageWrapper>
-      <PageHeader title="Reminders" description="Track expiring servers, domains, and notifications" />
+      <PageHeader 
+        title="Reminders" 
+        description="Centralized view of expiring and due items across your workspace"
+        icon={<Bell className="w-5 h-5" />}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card><CardContent className="flex items-center gap-4">
@@ -60,102 +90,125 @@ export default function RemindersPage() {
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-4">
           <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center"><Clock className="w-6 h-6 text-amber-600" /></div>
-          <div><p className="text-2xl font-bold text-gray-900">{stats.expiringSoon30}</p><p className="text-sm text-gray-500">Expiring in 30 days</p></div>
+          <div><p className="text-2xl font-bold text-gray-900">{stats.in30}</p><p className="text-sm text-gray-500">Expiring in 30 days</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><Bell className="w-6 h-6 text-blue-600" /></div>
-          <div><p className="text-2xl font-bold text-gray-900">{stats.expiringSoon60}</p><p className="text-sm text-gray-500">Expiring in 90 days</p></div>
+          <div><p className="text-2xl font-bold text-gray-900">{stats.in90}</p><p className="text-sm text-gray-500">Expiring in 90 days</p></div>
         </CardContent></Card>
       </div>
 
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex gap-6">
-          {[{ id: "expiring" as const, label: "Expiring Items" }, { id: "notifications" as const, label: "Notifications" }].map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>{tab.label}</button>
+          {tabs.map((tab) => (
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveTab(tab.id)} 
+              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+            >
+              {tab.label}
+            </button>
           ))}
         </nav>
       </div>
 
-      {activeTab === "expiring" && (
-        isLoading ? <Skeleton className="h-64" /> : expiring.length === 0 && expired.length === 0 ? (
-          <Card className="p-12 text-center"><CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" /><p className="text-gray-500">No expiring items. All good!</p></Card>
-        ) : (
-          <div className="space-y-4">
-            {expired.length > 0 && (
-              <Card>
-                <CardHeader><h3 className="font-semibold text-red-600">Expired ({expired.length})</h3></CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {expired.map((item) => (
-                      <div key={`${item.type}-${item.id}`} className="flex items-center justify-between p-3 rounded-lg bg-red-50 border border-red-100">
-                        <div className="flex items-center gap-3">
-                          {item.type === "server" ? <Server className="w-5 h-5 text-red-500" /> : <Globe className="w-5 h-5 text-red-500" />}
-                          <div><p className="font-medium text-sm">{item.name}</p><p className="text-xs text-gray-500">{item.client?.name || "No client"} · {item.type === "server" ? "Server" : "Domain"}</p></div>
-                        </div>
-                        <span className="text-xs font-medium text-red-600">Expired</span>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50/50 border-b border-gray-100 text-gray-500 uppercase tracking-wider text-[11px] font-semibold">
+              <tr>
+                <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">Client / Project</th>
+                <th className="px-6 py-4">Due Date</th>
+                <th className="px-6 py-4">Status / Priority</th>
+                <th className="px-6 py-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <Skeleton className="h-6 w-full max-w-md mx-auto" />
+                  </td>
+                </tr>
+              ) : reminders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                        <CheckCircle className="w-6 h-6 text-green-500" />
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {expiring.length > 0 && (
-              <Card>
-                <CardHeader><h3 className="font-semibold">Expiring Soon ({expiring.length})</h3></CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {expiring.map((item) => (
-                      <div key={`${item.type}-${item.id}`} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
-                        <div className="flex items-center gap-3">
-                          {item.type === "server" ? <Server className="w-5 h-5 text-amber-500" /> : <Globe className="w-5 h-5 text-blue-500" />}
-                          <div><p className="font-medium text-sm">{item.name}</p><p className="text-xs text-gray-500">{item.client?.name || "No client"} · {item.type === "server" ? "Server" : "Domain"}</p></div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <UrgencyBadge urgency={item.urgency} />
-                          <span className="text-xs text-gray-500">{item.daysRemaining}d left</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )
-      )}
-
-      {activeTab === "notifications" && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <h3 className="font-semibold">Notifications</h3>
-            <Button variant="secondary" size="sm" onClick={handleMarkAllRead}><CheckCheck className="w-4 h-4 mr-1" />Mark all read</Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? <Skeleton className="h-48" /> : notifications.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-8">No notifications</p>
-            ) : (
-              <div className="space-y-2">
-                {notifications.map((n) => (
-                  <div key={n.id} className={`flex items-start justify-between p-3 rounded-lg ${n.isRead ? "bg-white" : "bg-indigo-50"} border border-gray-100`}>
-                    <div className="flex items-start gap-3">
-                      <Bell className={`w-5 h-5 mt-0.5 ${n.isRead ? "text-gray-400" : "text-indigo-500"}`} />
-                      <div>
-                        <p className={`text-sm font-medium ${n.isRead ? "text-gray-700" : "text-gray-900"}`}>{n.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
-                        <p className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                      </div>
+                      <p className="font-medium text-gray-900 mb-1">All Caught Up!</p>
+                      <p className="text-sm">There are no items due or expiring soon.</p>
                     </div>
-                    {!n.isRead && (
-                      <Button variant="ghost" size="sm" onClick={() => handleDismiss(n.id)}>Dismiss</Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  </td>
+                </tr>
+              ) : (
+                reminders.map((item) => (
+                  <tr 
+                    key={`${item.type}-${item.id}`} 
+                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                    onClick={() => navigate(item.redirect_url)}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center">
+                          {getTypeIcon(item.type)}
+                        </div>
+                        <span className="capitalize font-medium text-gray-700 text-xs">{item.type}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-gray-900">{item.name}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-gray-900">{item.client_name || "-"}</span>
+                        {item.project_name && <span className="text-xs text-gray-500">{item.project_name}</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <span className="text-gray-900 font-medium">
+                          {format(new Date(item.due_date), "MMM d, yyyy")}
+                        </span>
+                        <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${getUrgencyColor(item.days_remaining)}`}>
+                          {getUrgencyText(item.days_remaining)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700 capitalize">
+                          {item.status.replace(/_/g, " ").toLowerCase()}
+                        </span>
+                        {item.priority && (
+                          <span className={`text-[11px] font-medium ${
+                            item.priority === "CRITICAL" ? "text-red-600" :
+                            item.priority === "HIGH" ? "text-orange-500" :
+                            "text-gray-500"
+                          }`}>
+                            {item.priority.charAt(0) + item.priority.slice(1).toLowerCase()}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        className="p-2 text-gray-400 hover:text-[#5438FF] hover:bg-[#EEF0FF] rounded-lg transition-colors inline-flex items-center justify-center"
+                        onClick={(e) => { e.stopPropagation(); navigate(item.redirect_url); }}
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </PageWrapper>
   );
 }

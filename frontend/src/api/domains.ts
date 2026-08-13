@@ -20,7 +20,7 @@ export interface Domain {
 }
 
 export const domainsApi = {
-  list: (params?: { page?: number; pageSize?: number; search?: string; clientId?: string; projectId?: string }) =>
+  list: (params?: { page?: number; pageSize?: number; search?: string; clientId?: string; projectId?: string; workspaceId?: string }) =>
     api.get<ApiResponse<Domain[]>>("/domains", { params }),
 
   get: (id: string) => api.get<ApiResponse<Domain>>(`/domains/${id}`),
@@ -31,5 +31,5 @@ export const domainsApi = {
 
   delete: (id: string) => api.delete<ApiResponse<{ message: string }>>(`/domains/${id}`),
 
-  getExpiring: () => api.get<ApiResponse<Domain[]>>("/domains/expiring"),
+  getExpiring: (params?: { workspaceId?: string }) => api.get<ApiResponse<Domain[]>>("/domains/expiring", { params }),
 };

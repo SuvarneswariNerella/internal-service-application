@@ -12,6 +12,7 @@ export interface DashboardStats {
     totalQrCodes: number;
     unreadReminders: number;
     totalFinanceRecords: number;
+    totalMaintenanceRecords: number;
   };
   expiringServers: {
     within30Days: number;
@@ -49,5 +50,5 @@ export interface DashboardStats {
 }
 
 export const dashboardApi = {
-  getStats: () => api.get<ApiResponse<DashboardStats>>("/dashboard/stats"),
+  getStats: (params?: { workspaceId?: string }) => api.get<ApiResponse<DashboardStats>>("/dashboard/stats", { params }),
 };

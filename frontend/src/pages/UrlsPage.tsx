@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Search, ExternalLink, Copy, BarChart3, Trash2, Link as LinkIcon, Building2, FolderKanban, Lock, Edit } from "lucide-react";
+import { Plus, Search, ExternalLink, Copy, BarChart3, Trash2, Link as LinkIcon, Building2, FolderKanban, Lock, Edit, QrCode } from "lucide-react";
 import PageWrapper from "@/components/ui/PageWrapper";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -10,6 +10,8 @@ import Skeleton from "@/components/ui/Skeleton";
 import StatusPill from "@/components/ui/StatusPill";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import UrlFormModal from "@/components/UrlFormModal";
+import QrCodeExportModal from "@/components/QrCodeExportModal";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useToastStore } from "@/store/toastStore";
 import { urlsApi, type ShortUrl } from "@/api/urls";
 import { clientsApi, type Client } from "@/api/clients";
@@ -25,21 +27,20 @@ export default function UrlsPage() {
   const [selectedClientId, setSelectedClientId] = useState(clientIdParam);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const { globalWorkspaceId } = useWorkspaceStore();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingUrl, setEditingUrl] = useState<ShortUrl | null>(null);
+  const [exportQrUrl, setExportQrUrl] = useState<ShortUrl | null>(null);
 
   useEffect(() => {
-    clientsApi.getOptions().then((res) => {
-      if (res.data.success && res.data.data) {
-        setClients(res.data.data as Client[]);
-      }
-    }).catch(() => {
-      clientsApi.list({ pageSize: 1000 }).then((res) => {
-        if (res.data.success && res.data.data) setClients(res.data.data);
-      });
+    clientsApi.list({ 
+      pageSize: 1000,
+      workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId
+    }).then((res) => {
+      if (res.data.success && res.data.data) setClients(res.data.data);
     });
-  }, []);
+  }, [globalWorkspaceId]);
 
   useEffect(() => {
     setSelectedClientId(clientIdParam);
@@ -54,7 +55,7 @@ export default function UrlsPage() {
     }
   };
 
-  useEffect(() => { fetchUrls(); }, [search, selectedClientId]);
+  useEffect(() => { fetchUrls(); }, [search, selectedClientId, globalWorkspaceId]);
 
   const fetchUrls = async () => {
     setIsLoading(true);
@@ -62,6 +63,7 @@ export default function UrlsPage() {
       const res = await urlsApi.list({
         search: search || undefined,
         clientId: selectedClientId || undefined,
+        workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
         pageSize: 1000,
       });
       if (res.data.data) {
@@ -78,7 +80,7 @@ export default function UrlsPage() {
   };
 
   const handleCopy = (url: ShortUrl) => {
-    const domainHost = url.domain?.domain ? `http://${url.domain.domain}` : window.location.origin;
+    const domainHost = window.location.origin;
     navigator.clipboard.writeText(`${domainHost}/s/${url.shortCode}`);
     addToast("Short URL copied to clipboard!", "success");
   };
@@ -95,8 +97,6 @@ export default function UrlsPage() {
 
   const isExpired = (url: ShortUrl) => {
     if (url.status === "EXPIRED") return true;
-    if (url.expiryDate && new Date(url.expiryDate) < new Date()) return true;
-    if (url.maxClicks && url.clickCount >= url.maxClicks) return true;
     return false;
   };
 
@@ -105,6 +105,7 @@ export default function UrlsPage() {
       <PageHeader
         title="URL Shortener"
         description="Create and manage short URLs across all clients, projects, and internal services"
+        icon={<LinkIcon className="w-5 h-5" />}
         action={
           <Button onClick={() => { setEditingUrl(null); setIsAddOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" />
@@ -169,6 +170,7 @@ export default function UrlsPage() {
                   <th className="py-3 px-4">Original URL</th>
                   <th className="py-3 px-4">Clicks</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 w-16 text-center">QR Code</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -176,6 +178,7 @@ export default function UrlsPage() {
                 {urls.map((url) => {
                   const expired = isExpired(url);
                   const displayClicks = url._count?.clicks ?? url.clickCount ?? 0;
+                  const primaryQr = url.qrCodes?.[0];
                   return (
                     <tr
                       key={url.id}
@@ -254,13 +257,40 @@ export default function UrlsPage() {
                       <td className="py-3 px-4 font-medium text-gray-800">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-semibold">
                           <BarChart3 className="w-3 h-3 text-gray-500" />
-                          {displayClicks} {url.maxClicks ? `/ ${url.maxClicks}` : ""} clicks
+                          {displayClicks} clicks
                         </span>
                       </td>
 
                       {/* Status */}
                       <td className="py-3 px-4 font-medium">
                         <StatusPill status={url.status} />
+                      </td>
+
+                      {/* QR Code */}
+                      <td className="py-3 px-4" onClick={(e) => {
+                        e.stopPropagation();
+                        if (primaryQr?.qrData) {
+                          setExportQrUrl(url);
+                        }
+                      }}>
+                        <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 border border-gray-200 overflow-hidden shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Export QR Code">
+                          {primaryQr?.qrData ? (
+                            primaryQr.qrData.startsWith("data:") ? (
+                              <img
+                                src={primaryQr.qrData}
+                                alt="QR Code"
+                                className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                              />
+                            ) : (
+                              <div 
+                                className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full hover:opacity-80 transition-opacity"
+                                dangerouslySetInnerHTML={{ __html: primaryQr.qrData }}
+                              />
+                            )
+                          ) : (
+                            <QrCode className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions */}
@@ -332,6 +362,12 @@ export default function UrlsPage() {
         urlItem={editingUrl}
         onClose={() => { setIsAddOpen(false); setEditingUrl(null); }}
         onSuccess={() => fetchUrls()}
+      />
+
+      <QrCodeExportModal
+        isOpen={!!exportQrUrl}
+        urlItem={exportQrUrl}
+        onClose={() => setExportQrUrl(null)}
       />
     </PageWrapper>
   );

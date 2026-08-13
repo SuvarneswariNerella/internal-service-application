@@ -12,4 +12,8 @@ export const authApi = {
     api.post<ApiResponse<AuthResponse>>("/auth/refresh", { refreshToken }),
 
   me: () => api.get<ApiResponse<User>>("/auth/me"),
+
+  generateTotp: () => api.post<ApiResponse<{ secret: string; qrCodeDataUrl: string }>>("/auth/totp/generate"),
+
+  verifyTotp: (token: string, secret: string) => api.post<ApiResponse<{ message: string }>>("/auth/totp/verify", { token, secret }),
 };

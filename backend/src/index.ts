@@ -19,6 +19,11 @@ import dashboardRoutes from "@/modules/dashboard/dashboard.routes";
 import searchRoutes from "@/modules/search/search.routes";
 import auditLogRoutes from "@/modules/audit-logs/audit-logs.routes";
 import platformRoutes from "@/modules/platforms/platforms.routes";
+import workspaceRoutes from "@/modules/workspaces/workspaces.routes";
+import settingsRoutes from "@/modules/settings/settings.routes";
+import maintenanceRoutes from "@/modules/maintenance/maintenance.routes";
+import templateRoutes from "@/modules/templates/templates.routes";
+import usersRoutes from "@/modules/users/users.routes";
 import { redirectShortUrl } from "@/modules/urls/controller";
 import { startCronJobs } from "@/utils/cron";
 
@@ -35,6 +40,8 @@ app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+
 
 app.get("/s/:shortCode", redirectShortUrl);
 
@@ -53,6 +60,11 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/platforms", platformRoutes);
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
+app.use("/api/templates", templateRoutes);
+app.use("/api/users", usersRoutes);
 
 app.use(errorHandler);
 
@@ -96,15 +108,18 @@ app.get("/api/debug-data", async (_req, res) => {
 
     const allClients = await prisma.client.findMany();
     const allProjects = await prisma.project.findMany({ include: { client: { select: { id: true, name: true } } } });
+    const allWorkspaces = await prisma.workspace.findMany();
 
     res.json({
       clientsCount: allClients.length,
       projectsCount: allProjects.length,
+      workspacesCount: allWorkspaces.length,
+      workspaces: allWorkspaces.map(w => ({ id: w.id, displayName: w.displayName })),
       clients: allClients.map((c) => ({ id: c.id, name: c.name })),
       projects: allProjects.map((p) => ({ id: p.id, name: p.name, clientId: p.clientId, clientName: p.client?.name })),
     });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).send(String(error));
   }
 });
 
@@ -118,7 +133,7 @@ ensureFinanceRecordTableSchema();
 
 startCronJobs();
 
-app.listen(config.port, () => {
+app.listen(config.port, '0.0.0.0', () => {
   console.log(`[IOMS] Server running on port ${config.port}`);
   console.log(`[IOMS] API docs available at http://localhost:${config.port}/api/docs`);
 });

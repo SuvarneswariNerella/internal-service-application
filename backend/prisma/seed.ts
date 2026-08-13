@@ -65,6 +65,18 @@ async function main() {
 
   console.log("Users created:", { admin: admin.email, pm: pm.email, dev: dev.email, accounts: accounts.email, ops: ops.email });
 
+  let workspace = await prisma.workspace.findFirst();
+  if (!workspace) {
+    workspace = await prisma.workspace.create({
+      data: {
+        displayName: "Edunura",
+        shortCode: "EDU",
+        legalName: "Edunura Inc",
+        activeClients: 3,
+      },
+    });
+  }
+
   let client1 = await prisma.client.findFirst({ where: { email: "john@acme.com" } });
   if (!client1) {
     client1 = await prisma.client.create({
@@ -76,6 +88,7 @@ async function main() {
         phone: "+1-555-0101",
         address: "123 Business St, New York, NY 10001",
         status: "ACTIVE",
+        workspaceId: workspace.id,
       },
     });
   }
@@ -91,6 +104,7 @@ async function main() {
         phone: "+1-555-0202",
         address: "456 Tech Ave, San Francisco, CA 94105",
         status: "ACTIVE",
+        workspaceId: workspace.id,
       },
     });
   }
@@ -109,6 +123,7 @@ async function main() {
         phone: "+1-555-0303",
         address: "Tech Tower 1, Cyber City DLF, Gurugram, Haryana 122002",
         status: "ACTIVE",
+        workspaceId: workspace.id,
       },
     });
   }

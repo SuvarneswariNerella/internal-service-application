@@ -1,17 +1,21 @@
 import { Router } from "express";
-import { listNotifications, markAsRead, markAllAsRead, deleteNotification, getExpiringItems } from "./reminders.controller";
+import { listNotifications, markAsRead, markAllAsRead, deleteNotification, getReminders, getRemindersSummary } from "./reminders.controller";
 import { authenticate } from "@/middleware/auth";
 
 const router = Router();
 
 router.use(authenticate);
 
-router.get("/notifications", async (req, res, next) => {
-  try { await listNotifications(req, res); } catch (e) { next(e); }
+router.get("/", async (req, res, next) => {
+  try { await getReminders(req, res); } catch (e) { next(e); }
 });
 
-router.get("/expiring", async (req, res, next) => {
-  try { await getExpiringItems(req, res); } catch (e) { next(e); }
+router.get("/summary", async (req, res, next) => {
+  try { await getRemindersSummary(req, res); } catch (e) { next(e); }
+});
+
+router.get("/notifications", async (req, res, next) => {
+  try { await listNotifications(req, res); } catch (e) { next(e); }
 });
 
 router.put("/notifications/:id/read", async (req, res, next) => {

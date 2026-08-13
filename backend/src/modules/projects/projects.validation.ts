@@ -9,6 +9,7 @@ export const createProjectSchema = z.object({
   status: z.enum(["PLANNING", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "ARCHIVED"]).optional(),
   clientId: z.string().min(1, "Client ID is required"),
   managerId: z.string().optional(),
+  workspaceId: z.string().optional().nullable(),
 });
 
 export const updateProjectSchema = z.object({
@@ -20,4 +21,5 @@ export const updateProjectSchema = z.object({
   status: z.enum(["PLANNING", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "ARCHIVED"]).optional(),
   clientId: z.string().min(1).optional(),
   managerId: z.string().optional(),
+  workspaceId: z.string().optional().nullable(),
 });

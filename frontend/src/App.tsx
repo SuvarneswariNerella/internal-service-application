@@ -23,8 +23,11 @@ import QrCodesPage from "@/pages/QrCodesPage";
 import QrCodeCreatePage from "@/pages/QrCodeCreatePage";
 import QrCodeDetailPage from "@/pages/QrCodeDetailPage";
 import FinancePage from "@/pages/FinancePage";
+import DocumentBuilderPage from "@/pages/DocumentBuilderPage";
+import MaintenancePage from "@/pages/MaintenancePage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
-import PlaceholderPage from "@/pages/PlaceholderPage";
+
+import SettingsPage from "@/pages/SettingsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -36,6 +39,14 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/finance/document-builder"
+        element={
+          <ProtectedRoute>
+            <DocumentBuilderPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/"
         element={
@@ -57,6 +68,7 @@ export default function App() {
         <Route path="domains" element={<DomainsPage />} />
         <Route path="domains/new" element={<DomainCreatePage />} />
         <Route path="domains/:id" element={<DomainDetailPage />} />
+        <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="finance" element={<FinancePage />} />
         <Route path="reminders" element={<RemindersPage />} />
         <Route path="urls" element={<UrlsPage />} />
@@ -66,7 +78,7 @@ export default function App() {
         <Route path="qr-codes/new" element={<QrCodeCreatePage />} />
         <Route path="qr-codes/:id" element={<QrCodeDetailPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
-        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

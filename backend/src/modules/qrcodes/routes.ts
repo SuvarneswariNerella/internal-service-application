@@ -9,6 +9,7 @@ import {
   getQrCodeById,
   deleteQrCode,
   previewQrCode,
+  downloadQrCode,
 } from "./controller";
 
 const router = Router();
@@ -20,5 +21,6 @@ router.post("/generate", authenticate, validate(qrCodeSchema), generateQrCode);
 router.post("/", authenticate, validate(qrCodeSchema), generateQrCode);
 router.put("/:id", authenticate, updateQrCode);
 router.delete("/:id", authenticate, deleteQrCode);
+router.get("/:id/download", downloadQrCode);
 
 export default router;

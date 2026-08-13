@@ -227,6 +227,7 @@ export default function ClientDetailPage() {
             <div><p className="text-xs text-gray-500 font-medium">Email</p><p className="text-sm font-semibold text-gray-900">{client.email}</p></div>
             <div><p className="text-xs text-gray-500 font-medium">Phone</p><p className="text-sm font-semibold text-gray-900">{client.phone || "—"}</p></div>
             <div><p className="text-xs text-gray-500 font-medium">Address</p><p className="text-sm font-semibold text-gray-900">{client.address || "—"}</p></div>
+            <div><p className="text-xs text-gray-500 font-medium">Account Manager Lead</p><p className="text-sm font-semibold text-gray-900">{client.accountManagerLead || "—"}</p></div>
           </CardContent>
         </Card>
         <Card>

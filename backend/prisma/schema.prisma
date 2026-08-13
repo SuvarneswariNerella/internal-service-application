@@ -50,13 +50,18 @@ model User {
   name      String
   role      Role        @default(DEVELOPER)
   avatar    String?
-  isActive  Boolean     @default(true)
-  createdAt DateTime    @default(now())
+  isActive      Boolean     @default(true)
+  totpSecret    String?
+  isTotpEnabled Boolean     @default(false)
+  createdAt     DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   auditLogs AuditLog[]
   loginLogs LoginLog[]
   shortUrls ShortUrl[]
   qrCodes   QrCode[]
+  assignedTickets MaintenanceRecord[] @relation("TicketAssignee")
+  ticketComments  TicketComment[]
+  statusChanges   TicketStatusHistory[]
 }
 
 model Client {
@@ -68,14 +73,20 @@ model Client {
   phone         String?
   address       String?
   status        ClientStatus @default(ACTIVE)
-  notes         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  projects      Project[]
-  domains       Domain[]
-  servers       Server[]
-  shortUrls     ShortUrl[]
-  qrCodes       QrCode[]
+  notes              String?
+  retainer           Float?       @default(0)
+  accountManagerLead String?
+  workspaceId        String?
+  workspace          Workspace?   @relation(fields: [workspaceId], references: [id])
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  projects           Project[]
+  domains            Domain[]
+  servers            Server[]
+  shortUrls          ShortUrl[]
+  qrCodes            QrCode[]
+  maintenanceRecords MaintenanceRecord[]
+  financeRecords     FinanceRecord[]
 }
 
 model Project {
@@ -99,6 +110,9 @@ model Project {
   servers        Server[]
   domains        Domain[]
   financeRecords FinanceRecord[]
+  maintenanceRecords MaintenanceRecord[]
+  workspaceId    String?
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id])
 }
 
 model Billing {
@@ -162,6 +176,8 @@ model Server {
   project         Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+  workspaceId     String?
+  workspace       Workspace?   @relation(fields: [workspaceId], references: [id])
 }
 
 model Domain {
@@ -180,7 +196,8 @@ model Domain {
   project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  shortUrls      ShortUrl[]
+  workspaceId    String?
+  workspace      Workspace? @relation(fields: [workspaceId], references: [id])
 }
 
 model ShortUrl {
@@ -188,18 +205,13 @@ model ShortUrl {
   originalUrl  String
   shortCode    String     @unique
   alias        String?
-  expiryDate   DateTime?
   clickCount   Int        @default(0)
   clientId     String?
   client       Client?    @relation(fields: [clientId], references: [id])
   projectId    String?
   project      Project?   @relation(fields: [projectId], references: [id])
   category     String?
-  domainId     String?
-  domain       Domain?    @relation(fields: [domainId], references: [id])
   passwordHash String?
-  maxClicks    Int?
-  redirectType String     @default("302")
   status       String     @default("ACTIVE")
   tags         String?
   notes        String?
@@ -209,6 +221,8 @@ model ShortUrl {
   updatedAt    DateTime   @updatedAt
   clicks       ClickLog[]
   qrCodes      QrCode[]
+  workspaceId  String?
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id])
 }
 
 model ClickLog {
@@ -256,6 +270,8 @@ model QrCode {
   creator              User?     @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  workspaceId          String?
+  workspace            Workspace? @relation(fields: [workspaceId], references: [id])
 }
 
 model Notification {
@@ -267,6 +283,8 @@ model Notification {
   entityType String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
 }
 
 model LoginLog {
@@ -290,8 +308,10 @@ model AssetPlatform {
 
 model FinanceRecord {
   id        String   @id @default(uuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   type      String   // INVOICE, RECEIPT, QUOTATION, CONTRACT, EXPENSE
   title     String
   amount    Decimal  @db.Decimal(10, 2)
@@ -301,6 +321,154 @@ model FinanceRecord {
   paidDate  DateTime?
   fileUrl   String?
   notes     String?
+  metadata  Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  emailLogs   EmailLog[]
+
+  sourcePoId         String?
+  convertedInvoiceId String?
+  sourcePo           FinanceRecord?  @relation("POToInvoice", fields: [sourcePoId], references: [id], onDelete: SetNull)
+  convertedInvoices  FinanceRecord[] @relation("POToInvoice")
+}
+
+model Workspace {
+  id                String   @id @default(uuid())
+  displayName       String
+  shortCode         String
+  contactEmail      String?
+  legalName         String
+  gstin             String?
+  state             String?
+  defaultCurrency   String   @default("INR")
+  invoicePrefix     String?
+  estimatePrefix    String?
+  poPrefix          String?
+  invoiceNextSeq    Int      @default(1)
+  estimateNextSeq   Int      @default(1)
+  poNextSeq         Int      @default(1)
+  ticketPrefix      String?  @default("TKT")
+  ticketNextSeq     Int      @default(1001)
+  bankName          String?
+  bankBranch        String?
+  accountNumber     String?
+  ifscCode          String?
+  address           String?
+  city              String?
+  postalCode        String?
+  country           String?
+  activeClients     Int      @default(0)
+  logoUrl           String?
+  clients           Client[]
+  projects          Project[]
+  servers           Server[]
+  domains           Domain[]
+  shortUrls         ShortUrl[]
+  qrCodes           QrCode[]
+  financeRecords    FinanceRecord[]
+  maintenanceRecords MaintenanceRecord[]
+  notifications     Notification[]
+  emailLogs         EmailLog[]
+  designTemplates   DesignTemplate[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model SystemSettings {
+  id                    String   @id @default(uuid())
+  agencyName            String?
+  baseCurrency          String?
+  timezone              String?
+  smtpHost              String?
+  smtpPort              String?
+  smtpUsername          String?
+  smtpPassword          String?
+  smtpSenderName        String?
+  smtpSenderEmail       String?
+  transactionalEmailKey String?
+  slackWebhookUrl       String?
+  domainRegistrarSecret String?
+  updatedAt             DateTime @updatedAt
+}
+
+model MaintenanceRecord {
+  id            String    @id @default(uuid())
+  ticketNumber  String?   @unique
+  title         String
+  description   String?   @db.Text
+  type          String    @default("MAINTENANCE")
+  status        String    @default("PENDING")
+  priority      String    @default("MEDIUM")
+  scheduledDate DateTime?
+  completedDate DateTime?
+  targetCompletionDate DateTime?
+  
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id])
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  workspaceId   String?
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id])
+  assigneeId    String?
+  assigneeName  String?
+  assignee      User?     @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  comments      TicketComment[]
+  statusHistory TicketStatusHistory[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model TicketComment {
+  id                  String   @id @default(uuid())
+  maintenanceRecordId String
+  maintenanceRecord   MaintenanceRecord @relation(fields: [maintenanceRecordId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  content             String   @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model EmailLog {
+  id              String   @id @default(uuid())
+  financeRecordId String
+  financeRecord   FinanceRecord @relation(fields: [financeRecordId], references: [id], onDelete: Cascade)
+  sender          String
+  recipient       String
+  subject         String
+  content         String   @db.Text
+  status          String   @default("SENT")
+  sentAt          DateTime @default(now())
+  workspaceId     String?
+  workspace       Workspace? @relation(fields: [workspaceId], references: [id])
+}
+
+model DesignTemplate {
+  id          String    @id @default(uuid())
+  type        String    // INVOICES, PROPOSALS, PURCHASE_ORDERS
+  design      String    // BRANDED COLOR-HEADER, CLASSIC, etc.
+  isDefault   Boolean   @default(false)
+  title       String
+  description String?   @db.Text
+  customHtml  String?   @db.Text
+  customCss   String?   @db.Text
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model TicketStatusHistory {
+  id                  String   @id @default(uuid())
+  maintenanceRecordId String
+  maintenanceRecord   MaintenanceRecord @relation(fields: [maintenanceRecordId], references: [id], onDelete: Cascade)
+  status              String
+  changedById         String?
+  changedBy           User?    @relation(fields: [changedById], references: [id])
+  enteredAt           DateTime @default(now())
+  exitedAt            DateTime?
+  durationMinutes     Int?
 }
