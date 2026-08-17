@@ -18,7 +18,7 @@ services:
       retries: 10
       start_period: 10s
 
-  backend:
+  ioms-backend:
     build: 
       context: ./backend
     restart: always
@@ -41,7 +41,7 @@ services:
     expose:
       - "80"
     depends_on:
-      - backend
+      - ioms-backend
     networks:
       - default
       - dokploy-network
