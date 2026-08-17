@@ -83,7 +83,7 @@ export default function FinanceDocumentViewModal({
   const igst = taxType === "INTER" ? totalGst : 0;
 
   // Client name
-  const clientName = record.project?.client?.name || "Unknown Client";
+  const clientName = metadata.builderData?.clientName || record.project?.client?.name || "Unknown Client";
 
   // Document formatting
   const docNumber = record.title || "Unknown ID";
@@ -221,14 +221,16 @@ export default function FinanceDocumentViewModal({
           {/* GSTIN Section */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm grid grid-cols-2 gap-8">
             <div>
-              <div className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Supplier / Issuing Entity GSTIN</div>
-              <div className="text-[14px] font-bold text-[#111827]">27AAACE1234F1Z1</div>
-              <div className="text-[12px] font-medium text-gray-500 mt-0.5">State: 27 - Maharashtra</div>
+              <div className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Supplier / Issuing Entity Details</div>
+              <div className="text-[14px] font-bold text-[#111827]">{metadata.builderData?.companyName || "Unknown Supplier"}</div>
+              <div className="text-[12px] font-medium text-gray-500 mt-0.5 whitespace-pre-line">{metadata.builderData?.companyAddress || "-"}</div>
+              <div className="text-[12px] font-medium text-gray-500 mt-0.5">State: {metadata.builderData?.companyState || metadata.companyState || "-"}</div>
             </div>
             <div>
-              <div className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Client / Recipient GSTIN</div>
-              <div className="text-[14px] font-bold text-[#111827]">27AAACA0000A1Z1</div>
-              <div className="text-[12px] font-medium text-gray-500 mt-0.5">State: 27 - Maharashtra</div>
+              <div className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Client / Recipient Details</div>
+              <div className="text-[14px] font-bold text-[#111827]">{clientName}</div>
+              <div className="text-[12px] font-medium text-gray-500 mt-0.5 whitespace-pre-line">{metadata.builderData?.clientAddress || "-"}</div>
+              <div className="text-[12px] font-medium text-gray-500 mt-0.5">State: {metadata.builderData?.clientState || metadata.clientState || "-"}</div>
             </div>
           </div>
 
@@ -256,7 +258,7 @@ export default function FinanceDocumentViewModal({
                       <tr key={item.id || idx} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-4">
                           <div className="font-bold text-[#111827] text-[13px] leading-tight mb-1">{item.description}</div>
-                          <div className="text-[11px] text-gray-500 leading-tight">Deliverable package according to agreement for {clientName}.</div>
+                          {item.hsn && <div className="text-[11px] text-gray-500 leading-tight">HSN/SAC: {item.hsn}</div>}
                         </td>
                         <td className="px-5 py-4 text-center font-bold text-[#111827] text-[13px]">{item.qty}</td>
                         <td className="px-5 py-4 text-right font-medium text-gray-600 text-[13px]">₹{Number(item.rate).toLocaleString()}</td>
@@ -352,7 +354,7 @@ export default function FinanceDocumentViewModal({
               record.convertedInvoiceId ? (
                 <button 
                   onClick={() => onViewInvoice && onViewInvoice(record.convertedInvoiceId!)}
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-[13px] font-bold text-[#8B3DFF] bg-purple-50 hover:bg-purple-100 transition-all shadow-sm"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-[13px] font-bold text-[#007aff] bg-blue-50 hover:bg-blue-100 transition-all shadow-sm"
                 >
                   <Eye className="w-4 h-4 mr-2" />
                   View Invoice
@@ -360,7 +362,7 @@ export default function FinanceDocumentViewModal({
               ) : (
                 <button 
                   onClick={() => setShowConvertConfirm(true)}
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-[13px] font-bold text-white bg-[#8B3DFF] hover:bg-[#7a32e5] transition-all shadow-sm shadow-purple-500/20"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl text-[13px] font-bold text-white bg-[#007aff] hover:bg-[#0062cc] transition-all shadow-sm shadow-blue-500/20"
                 >
                   <FileOutput className="w-4 h-4 mr-2" />
                   Convert to Invoice
@@ -431,7 +433,7 @@ export default function FinanceDocumentViewModal({
               <button 
                 onClick={handleConvert}
                 disabled={isConverting}
-                className="px-4 py-2 font-bold text-white bg-[#8B3DFF] hover:bg-[#7a32e5] rounded-xl transition-colors shadow-sm shadow-purple-500/20 flex items-center disabled:opacity-50"
+                className="px-4 py-2 font-bold text-white bg-[#007aff] hover:bg-[#0062cc] rounded-xl transition-colors shadow-sm shadow-blue-500/20 flex items-center disabled:opacity-50"
               >
                 {isConverting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Confirm Conversion

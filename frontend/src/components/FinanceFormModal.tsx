@@ -165,8 +165,9 @@ export default function FinanceFormModal({
   }, [record, isOpen]);
 
   // Calculations
-  const subtotal = lineItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
+  const baseTotal = lineItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
   const totalGst = lineItems.reduce((acc, item) => acc + ((item.qty * item.rate * item.gst) / 100), 0);
+  const subtotal = lineItems.reduce((acc, item) => acc + ((item.qty * item.rate) * (1 + item.gst / 100)), 0);
   const grandTotal = Math.max(0, subtotal - discount + totalGst);
 
   const handleAddLineItem = () => {
@@ -371,7 +372,7 @@ export default function FinanceFormModal({
                           <td className="py-4 px-4 text-[13px] font-bold text-gray-700 text-center">{item.qty}</td>
                           <td className="py-4 px-4 text-[13px] font-medium text-gray-600 text-right">₹{(item.rate || 0).toLocaleString()}</td>
                           <td className="py-4 px-4 text-[13px] font-medium text-gray-600 text-center">{item.gst}%</td>
-                          <td className="py-4 px-4 text-[13px] font-bold text-[#111827] text-right">₹{((item.qty || 0) * (item.rate || 0)).toLocaleString()}</td>
+                          <td className="py-4 px-4 text-[13px] font-bold text-[#111827] text-right">₹{((item.qty || 0) * (item.rate || 0) * (1 + (item.gst || 0) / 100)).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -563,7 +564,18 @@ export default function FinanceFormModal({
                 <div className="relative">
                   <select 
                     value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
+                    onChange={(e) => {
+                      const newProjectId = e.target.value;
+                      setProjectId(newProjectId);
+                      if (newProjectId && activeWorkspace) {
+                        const selectedProject = projects.find(p => p.id === newProjectId);
+                        if (selectedProject?.client?.state) {
+                          const clientState = selectedProject.client.state.trim().toLowerCase();
+                          const workspaceState = activeWorkspace.state?.trim().toLowerCase() || "";
+                          setTaxType(clientState === workspaceState ? "INTRA" : "INTER");
+                        }
+                      }
+                    }}
                     className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-[13px] font-bold text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#5438FF]/20"
                   >
                     <option value="">Select Project...</option>
@@ -573,7 +585,7 @@ export default function FinanceFormModal({
                   </select>
                   <ChevronDown className="absolute right-3 top-2.5 w-4 h-4 text-gray-500 pointer-events-none" />
                 </div>
-                <p className="text-[11px] text-gray-400 font-medium mt-1.5">State: 27 - Maharashtra</p>
+                <p className="text-[11px] text-gray-400 font-medium mt-1.5">State: {projects.find(p => p.id === projectId)?.client?.state || "Not set"}</p>
               </div>
 
               <div className="col-span-1">
@@ -788,7 +800,7 @@ export default function FinanceFormModal({
                       <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-500 pointer-events-none" />
                     </td>
                     <td className="px-2 py-1 text-right font-extrabold text-[14px] text-gray-900">
-                      ₹{(item.qty * item.rate).toLocaleString()}
+                      ₹{((item.qty * item.rate) * (1 + item.gst / 100)).toLocaleString()}
                     </td>
                     <td className="px-1 py-1 text-center">
                       <button onClick={() => handleRemoveLineItem(item.id)} className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">

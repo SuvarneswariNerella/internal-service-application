@@ -81,7 +81,7 @@ export default function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col font-sans border border-gray-100">
+      <div className="bg-white rounded-[16px] shadow-2xl w-[800px] h-[600px] max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col font-sans border border-gray-100">
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4 border-b border-gray-100 bg-white shrink-0">
           <button 
@@ -162,14 +162,21 @@ export default function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate 
                           const hrs = Math.floor(history.durationMinutes / 60);
                           const mins = history.durationMinutes % 60;
                           formattedDuration = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
-                        } else if (!history.exitedAt) {
+                        } else if (!history.exitedAt && history.enteredAt) {
                            const now = new Date();
-                           const durationMs = now.getTime() - new Date(history.enteredAt).getTime();
-                           const durationMins = Math.floor(durationMs / 60000);
-                           const hrs = Math.floor(durationMins / 60);
-                           const mins = durationMins % 60;
-                           formattedDuration = hrs > 0 ? `${hrs}h ${mins}m (current)` : `${mins}m (current)`;
+                           const enteredDate = new Date(history.enteredAt);
+                           if (!isNaN(enteredDate.getTime())) {
+                             const durationMs = now.getTime() - enteredDate.getTime();
+                             const durationMins = Math.max(0, Math.floor(durationMs / 60000));
+                             const hrs = Math.floor(durationMins / 60);
+                             const mins = durationMins % 60;
+                             formattedDuration = hrs > 0 ? `${hrs}h ${mins}m (current)` : `${mins}m (current)`;
+                           }
                         }
+
+                        const displayDate = history.enteredAt && !isNaN(new Date(history.enteredAt).getTime()) 
+                          ? format(new Date(history.enteredAt), "MMM d, h:mm a") 
+                          : "Just now";
 
                         return (
                           <div key={history.id} className="relative flex items-center gap-4">
@@ -182,7 +189,7 @@ export default function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate 
                                   {history.status.replace(/_/g, " ").toLowerCase()}
                                 </div>
                                 <div className="text-[11px] text-slate-500 font-medium">
-                                  by {history.changedBy?.name || "System"} • {format(new Date(history.enteredAt), "MMM d, h:mm a")}
+                                  by {history.changedBy?.name || "System"} • {displayDate}
                                 </div>
                               </div>
                               <div className="text-xs font-semibold text-[#5438FF] bg-[#EEF0FF] px-2 py-1 rounded-md">
@@ -248,7 +255,7 @@ export default function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate 
               </div>
 
               {/* Right Column */}
-              <div className="w-full md:w-60 p-6 flex flex-col gap-6 shrink-0 bg-white">
+              <div className="w-full md:w-[270px] p-6 flex flex-col gap-6 shrink-0 bg-white overflow-y-auto border-l border-gray-100 md:border-l-0">
                 
                 {/* Status Controls */}
                 <div>
@@ -307,6 +314,30 @@ export default function TicketDetailModal({ isOpen, onClose, ticketId, onUpdate 
                 <div>
                   <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-2">Type</h3>
                   <p className="text-[14px] text-[#111827] capitalize font-medium">{ticket?.type?.toLowerCase() || "Bug"}</p>
+                </div>
+
+                {/* Priority */}
+                <div>
+                  <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-2">Priority</h3>
+                  <p className="text-[14px] text-[#111827] capitalize font-medium">{ticket?.priority ? ticket.priority.toLowerCase() : "Medium"}</p>
+                </div>
+
+                {/* Due Date */}
+                <div>
+                  <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-2">Due Date</h3>
+                  <p className="text-[14px] text-[#111827] font-medium">{ticket?.targetCompletionDate ? format(new Date(ticket.targetCompletionDate), "MMM d, yyyy") : ticket?.scheduledDate ? format(new Date(ticket.scheduledDate), "MMM d, yyyy") : "-"}</p>
+                </div>
+
+                {/* Client */}
+                <div>
+                  <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-2">Client</h3>
+                  <p className="text-[14px] text-[#111827] font-medium">{ticket?.client?.name || "-"}</p>
+                </div>
+
+                {/* Project */}
+                <div>
+                  <h3 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-2">Project</h3>
+                  <p className="text-[14px] text-[#111827] font-medium">{ticket?.project?.name || "-"}</p>
                 </div>
               </div>
             </>

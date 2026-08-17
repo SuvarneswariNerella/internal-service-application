@@ -11,7 +11,7 @@ export async function globalSearch(req: Request, res: Response): Promise<void> {
 
   const searchPattern = { contains: query };
 
-  const [clients, projects, servers, domains, urls, billing] = await Promise.all([
+  const [clients, projects, servers, domains, urls] = await Promise.all([
     prisma.client.findMany({
       where: {
         OR: [
@@ -68,20 +68,10 @@ export async function globalSearch(req: Request, res: Response): Promise<void> {
       take: 10,
       select: { id: true, shortCode: true, originalUrl: true, clickCount: true, alias: true },
     }),
-    prisma.billing.findMany({
-      where: {
-        OR: [
-          { billingType: searchPattern },
-          { invoiceNumber: searchPattern },
-        ],
-      },
-      take: 10,
-      select: { id: true, billingType: true, amount: true, paymentStatus: true, invoiceNumber: true, project: { select: { name: true } } },
-    }),
   ]);
 
   res.json({
     success: true,
-    data: { clients, projects, servers, domains, urls, billing },
+    data: { clients, projects, servers, domains, urls },
   });
 }

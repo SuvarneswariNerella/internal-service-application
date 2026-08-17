@@ -57,17 +57,21 @@ export default function MaintenancePage() {
   useEffect(() => {
     const ticketId = searchParams.get("ticketId");
     if (ticketId) {
-      setSelectedTicketId(ticketId);
-      setIsDetailModalOpen(true);
+      // If there's a ticket id in the url, load it for editing
+      const record = records.find(r => r.id === ticketId);
+      if (record) {
+        setSelectedRecord(record);
+        setIsModalOpen(true);
+      }
       searchParams.delete("ticketId");
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, records]);
 
   const handleEdit = (e: React.MouseEvent, record: MaintenanceRecord) => {
     e.stopPropagation();
-    setSelectedRecord(record);
-    setIsModalOpen(true);
+    setSelectedTicketId(record.id);
+    setIsDetailModalOpen(true);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -208,10 +212,7 @@ export default function MaintenancePage() {
                   <tr 
                     key={record.id} 
                     className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
-                    onClick={() => {
-                      setSelectedTicketId(record.id);
-                      setIsDetailModalOpen(true);
-                    }}
+                    onClick={(e) => handleEdit(e, record)}
                   >
                     <td className="px-6 py-4 font-semibold text-[#0056b3] text-[15px]">{record.ticketNumber || "TKT-PENDING"}</td>
                     <td className="px-6 py-4 font-medium text-gray-900">{record.client?.name || "-"}</td>
@@ -284,10 +285,12 @@ export default function MaintenancePage() {
         record={selectedRecord}
         onSuccess={fetchRecords}
       />
-
       <TicketDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedTicketId(null);
+        }}
         ticketId={selectedTicketId}
         onUpdate={fetchRecords}
       />

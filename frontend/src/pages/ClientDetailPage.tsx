@@ -638,9 +638,9 @@ export default function ClientDetailPage() {
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         client={client}
-        onSuccess={(updatedClient) => {
-          if (updatedClient) setClient(updatedClient);
-          else fetchClient();
+        onSuccess={() => {
+          fetchClient();
+          fetchCounts();
         }}
       />
 

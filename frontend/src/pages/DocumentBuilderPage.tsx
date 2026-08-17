@@ -4,15 +4,18 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { ArrowLeft, Download, Save, Plus, Trash2, LayoutTemplate, Upload, Image as ImageIcon } from "lucide-react";
 import { financeApi } from "@/api/finance";
 import { clientsApi, type Client } from "@/api/clients";
+import { templatesApi } from "@/api/templates";
+import { itemsApi, type ItemCode } from "@/api/items";
+import { projectsApi, type Project } from "@/api/projects";
 import { useToastStore } from "@/store/toastStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 // @ts-ignore
-import classicTemplate from "../../../Invoice_Templates/Classic.html?raw";
+import classicTemplate from "../Invoice_Templates/Classic.html?raw";
 // @ts-ignore
-import minimalTemplate from "../../../Invoice_Templates/Minimal.html?raw";
+import minimalTemplate from "../Invoice_Templates/Minimal.html?raw";
 // @ts-ignore
-import modernTemplate from "../../../Invoice_Templates/Modern.html?raw";
+import modernTemplate from "../Invoice_Templates/Modern.html?raw";
 
 const templates: Record<string, string> = {
   classic: classicTemplate,
@@ -23,6 +26,7 @@ const templates: Record<string, string> = {
 interface Item {
   name: string;
   description: string;
+  hsn: string;
   price: number;
   qty: number;
   gst: number;
@@ -32,14 +36,17 @@ interface FormData {
   template: string;
   invoiceNo: string;
   date: string;
+  dueDate: string;
   clientName: string;
   clientAddress: string;
   clientEmail: string;
+  clientState: string;
   projectId: string;
   logoBase64?: string;
   companyName: string;
   companyAddress: string;
   companyEmail: string;
+  companyState: string;
   paymentMethod: string;
   paymentInfo: string;
   terms: string;
@@ -48,6 +55,11 @@ interface FormData {
   items: Item[];
   primaryColor: string;
 }
+
+const normalizeState = (state?: string) => {
+  if (!state) return "";
+  return state.replace(/^\d+[\s-]*\s*/, '').trim().toLowerCase();
+};
 
 export default function DocumentBuilderPage() {
   const [searchParams] = useSearchParams();
@@ -59,26 +71,33 @@ export default function DocumentBuilderPage() {
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const draftKey = `docBuilderDraft_${type}`;
+  const savedDraft = sessionStorage.getItem(draftKey);
+  const parsedDraft = savedDraft ? JSON.parse(savedDraft) : null;
+
   const { register, control, watch, handleSubmit, setValue } = useForm<FormData>({
-    defaultValues: {
+    defaultValues: parsedDraft || {
       template: initialTemplate,
       invoiceNo: "INV-001",
-      date: new Date().toLocaleDateString("en-GB"), // DD/MM/YYYY
+      date: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       clientName: "Acme Corp",
       clientAddress: "123 Business St, NY",
       clientEmail: "billing@acme.com",
+      clientState: "Maharashtra",
       projectId: "",
       logoBase64: "",
       companyName: "Laralink Ltd",
       companyAddress: "86-90 Paul Street, London\nEngland EC2A 4NE",
       companyEmail: "demo@gmail.com",
+      companyState: "Maharashtra",
       paymentMethod: "Paypal, Western Union",
       paymentInfo: "Credit Card - 236***********928\nAmount: ₹1732",
       terms: "All claims relating to quantity or shipping errors shall be waived by Buyer unless made in writing to\nSeller within thirty (30) days after delivery of goods to the address stated.",
       signatureName: "Jhon Donate",
       signatureRole: "Accounts Manager",
       items: [
-        { name: "Web Development", description: "Frontend and Backend", price: 1500, qty: 1, gst: 18 }
+        { name: "Web Development", description: "Frontend and Backend", hsn: "998311", price: 1500, qty: 1, gst: 18 }
       ],
       primaryColor: "#007aff",
     }
@@ -91,7 +110,13 @@ export default function DocumentBuilderPage() {
 
   const formData = watch();
 
+  useEffect(() => {
+    sessionStorage.setItem(draftKey, JSON.stringify(formData));
+  }, [formData, draftKey]);
+
   const [clients, setClients] = useState<Client[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
   const { globalWorkspaceId, workspaces } = useWorkspaceStore();
 
   // Auto-fill workspace data
@@ -119,6 +144,10 @@ export default function DocumentBuilderPage() {
         
         if (addressParts.length > 0) {
           setValue("companyAddress", addressParts.join(", "));
+        }
+        
+        if (activeWorkspace.state) {
+          setValue("companyState", activeWorkspace.state);
         }
         
         // Auto-fill sequential document number
@@ -155,13 +184,38 @@ export default function DocumentBuilderPage() {
     fetchClients();
   }, [globalWorkspaceId]);
 
+  useEffect(() => {
+    if (selectedClientId) {
+      projectsApi.list({ clientId: selectedClientId }).then(res => {
+        if (res.data.success) setProjects(res.data.data || []);
+      }).catch(err => console.error(err));
+    } else {
+      setProjects([]);
+    }
+  }, [selectedClientId]);
+
+  const [itemCodes, setItemCodes] = useState<ItemCode[]>([]);
+
+  useEffect(() => {
+    const fetchItemCodes = async () => {
+      try {
+        const res = await itemsApi.list();
+        if (res.data.success) {
+          setItemCodes(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to load item codes", err);
+      }
+    };
+    fetchItemCodes();
+  }, []);
+
   const [customTemplate, setCustomTemplate] = useState<any>(null);
 
   useEffect(() => {
     if (templateId) {
-      import('@/api/templates').then(({ templatesApi }) => {
-        templatesApi.get(templateId).then(res => {
-          if (res.data.success && res.data.data) {
+      templatesApi.get(templateId).then(res => {
+        if (res.data.success && res.data.data) {
             const tmpl = res.data.data;
             setCustomTemplate(tmpl);
             if (tmpl.customHtml) {
@@ -176,13 +230,12 @@ export default function DocumentBuilderPage() {
             setValue('template', 'custom');
           }
         });
-      });
     }
   }, [templateId, setValue]);
 
   // Calculate totals
-  const subtotal = formData.items.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const taxAmount = formData.items.reduce((acc, item) => acc + (item.price * item.qty * ((item.gst || 0) / 100)), 0);
+  const subtotal = formData.items.reduce((acc, item) => acc + (item.price * item.qty * (1 + (item.gst || 0) / 100)), 0);
   const total = subtotal + taxAmount;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,6 +253,7 @@ export default function DocumentBuilderPage() {
   let docTitle = "INVOICE";
   let numberLabel = "Invoice No";
   let dateLabel = "Date";
+  let dueDateLabel = "Due Date";
   let clientLabel = "Invoice To";
   let companyLabel = "Pay To";
 
@@ -207,12 +261,14 @@ export default function DocumentBuilderPage() {
     docTitle = "PURCHASE ORDER";
     numberLabel = "PO Number";
     dateLabel = "Order Date";
+    dueDateLabel = "Expected Delivery";
     clientLabel = "Vendor Info";
     companyLabel = "Deliver To";
   } else if (type === "estimate") {
     docTitle = "ESTIMATE";
     numberLabel = "Estimate No";
-    dateLabel = "Valid Until";
+    dateLabel = "Issue Date";
+    dueDateLabel = "Valid Until";
     clientLabel = "Prepared For";
     companyLabel = "Prepared By";
   }
@@ -235,6 +291,7 @@ export default function DocumentBuilderPage() {
     rawHtml = rawHtml.replace(/Invoice No:/g, `${numberLabel}:`);
     rawHtml = rawHtml.replace(/>NO:\s*/g, `>${numberLabel}: `);
     rawHtml = rawHtml.replace(/Date:/g, `${dateLabel}:`);
+    rawHtml = rawHtml.replace(/Due Date:/g, `${dueDateLabel}:`);
     rawHtml = rawHtml.replace(/Invoice To:/g, `${clientLabel}:`);
     rawHtml = rawHtml.replace(/>Bill To:</g, `>${clientLabel}:<`);
     rawHtml = rawHtml.replace(/Pay To:/g, `${companyLabel}:`);
@@ -243,6 +300,7 @@ export default function DocumentBuilderPage() {
     // Inject dynamic data spans for reliable hydration across all templates
     rawHtml = rawHtml.replace(/#LL93784/g, '<span class="dyn-inv-no"></span>');
     rawHtml = rawHtml.replace(/01\.07\.2022/g, '<span class="dyn-date"></span>');
+    rawHtml = rawHtml.replace(/30\.07\.2022/g, '<span class="dyn-due-date"></span>');
 
     // Dynamically inject custom primary color by overriding template defaults
     rawHtml = rawHtml.replace(/#007aff/gi, formData.primaryColor); // Classic/Minimal primary
@@ -285,6 +343,7 @@ export default function DocumentBuilderPage() {
     // Invoice Details
     doc.querySelectorAll('.dyn-inv-no').forEach(el => el.textContent = `#${formData.invoiceNo}`);
     doc.querySelectorAll('.dyn-date').forEach(el => el.textContent = formData.date);
+    doc.querySelectorAll('.dyn-due-date').forEach(el => el.textContent = formData.dueDate);
 
     // Helper to find the paragraph following a specific label
     const updateInfoBlock = (labelText: string, newHtml: string) => {
@@ -304,8 +363,10 @@ export default function DocumentBuilderPage() {
       }
     };
 
-    updateInfoBlock(clientLabel, `${formData.clientName} <br> ${formData.clientAddress.replace(/\n/g, '<br>')} <br> ${formData.clientEmail}`);
-    updateInfoBlock(companyLabel, `${formData.companyName} <br> ${formData.companyAddress.replace(/\n/g, '<br>')} <br> ${formData.companyEmail}`);
+    const isIntraState = normalizeState(formData.companyState) === normalizeState(formData.clientState);
+
+    updateInfoBlock(clientLabel, `${formData.clientName} <br> ${formData.clientAddress.replace(/\n/g, '<br>')} <br> ${formData.clientEmail} <br> <b>State:</b> ${formData.clientState}`);
+    updateInfoBlock(companyLabel, `${formData.companyName} <br> ${formData.companyAddress.replace(/\n/g, '<br>')} <br> ${formData.companyEmail} <br> <b>State:</b> ${formData.companyState}`);
     updateInfoBlock("Payment info", formData.paymentInfo.replace(/\n/g, '<br>'));
     updateInfoBlock("Terms & Conditions", formData.terms.replace(/\n/g, '<br>'));
 
@@ -333,12 +394,14 @@ export default function DocumentBuilderPage() {
     if (activeDesign === "classic") {
       const sep = doc.querySelector('.tm_invoice_seperator') as HTMLElement | null;
       if (sep) {
+        // Set to 85% to ensure the entire label text is fully covered by the blue banner
         if (type === 'estimate') {
-          sep.style.width = '73%';
+          sep.style.width = '85%';
         } else if (type === 'po') {
-          sep.style.width = '77%';
+          sep.style.width = '85%';
         } else {
-          sep.style.width = '65%';
+          // Increased to 85% to ensure the entire 'Invoice No' text is fully covered
+          sep.style.width = '85%';
         }
       }
     }
@@ -360,19 +423,21 @@ export default function DocumentBuilderPage() {
           tr.innerHTML = `
             <td>${index + 1}. ${item.name}</td>
             <td>${item.description}</td>
+            <td style="text-align: center;">${item.hsn || ''}</td>
             <td style="text-align: center;">₹${Number(item.price).toFixed(2)}</td>
             <td style="text-align: center;">${item.qty}</td>
             <td style="text-align: center;">${item.gst || 0}%</td>
-            <td style="text-align: center;">₹${(Number(item.price) * Number(item.qty)).toFixed(2)}</td>
+            <td style="text-align: center;">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
           `;
         } else {
           tr.innerHTML = `
             <td class="tm_width_3">${index + 1}. ${item.name}</td>
             <td class="tm_width_3">${item.description}</td>
+            <td class="tm_width_2">${item.hsn || ''}</td>
             <td class="tm_width_2">₹${Number(item.price).toFixed(2)}</td>
             <td class="tm_width_1">${item.qty}</td>
             <td class="tm_width_1">${item.gst || 0}%</td>
-            <td class="tm_width_2 tm_text_right">₹${(Number(item.price) * Number(item.qty)).toFixed(2)}</td>
+            <td class="tm_width_2 tm_text_right">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
           `;
         }
         
@@ -405,16 +470,43 @@ export default function DocumentBuilderPage() {
         }
     };
 
+    const updateLabel = (row: HTMLElement | null, text: string) => {
+        if (!row) return;
+        const tds = Array.from(row.querySelectorAll('td'));
+        if (tds.length >= 2) {
+            const labelTd = tds[tds.length - 2];
+            if (labelTd) {
+                const b = labelTd.querySelector('b');
+                if (b) b.textContent = text;
+                else labelTd.textContent = text;
+            }
+        }
+    };
+
     const subtotalRow = findTotalRow('Subtoal') || findTotalRow('Sub Total');
     updateVal(subtotalRow, `₹${subtotal.toFixed(2)}`);
 
-    const taxRow = findTotalRow('Total GST') || findTotalRow('Tax');
-    updateVal(taxRow, `+₹${taxAmount.toFixed(2)}`);
+    const taxRow = findTotalRow('Total GST') || findTotalRow('Tax') || findTotalRow('CGST') || findTotalRow('IGST');
+    
+    // Clean up any previously injected SGST row to prevent duplicates on re-render
+    const possibleSgstRow = findTotalRow('SGST');
+    if (possibleSgstRow) possibleSgstRow.remove();
+
     if (taxRow) {
-      // Find the label cell (usually the first one in the row)
-      const labelTd = taxRow.firstElementChild;
-      if (labelTd) {
-        labelTd.innerHTML = `Total GST`;
+      if (isIntraState) {
+        const cgstAmount = taxAmount / 2;
+        const sgstAmount = taxAmount / 2;
+        
+        updateVal(taxRow, `+₹${cgstAmount.toFixed(2)}`);
+        updateLabel(taxRow, `CGST`);
+        
+        const sgstRow = taxRow.cloneNode(true) as HTMLElement;
+        updateVal(sgstRow, `+₹${sgstAmount.toFixed(2)}`);
+        updateLabel(sgstRow, `SGST`);
+        taxRow.parentNode?.insertBefore(sgstRow, taxRow.nextSibling);
+      } else {
+        updateVal(taxRow, `+₹${taxAmount.toFixed(2)}`);
+        updateLabel(taxRow, `IGST`);
       }
     }
 
@@ -469,15 +561,21 @@ export default function DocumentBuilderPage() {
         amount: total,
         currency: "INR",
         status: "DRAFT",
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         workspaceId: globalWorkspaceId === "all" ? undefined : globalWorkspaceId,
         metadata: {
           builderData: data,
           lineItems: data.items.map(item => ({
             description: item.name + (item.description ? ` - ${item.description}` : ''),
+            hsn: item.hsn,
             qty: item.qty,
             rate: item.price,
             gst: item.gst || 0
           })),
+          companyState: data.companyState,
+          clientState: data.clientState,
+          isIntraState: normalizeState(data.companyState) === normalizeState(data.clientState),
+          taxType: (normalizeState(data.companyState) === normalizeState(data.clientState)) ? "INTRA" : "INTER",
           subtotal,
           taxAmount,
           totalGst: taxAmount,
@@ -595,13 +693,17 @@ export default function DocumentBuilderPage() {
                   </div>
                 </div>
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">{numberLabel}</label>
                 <input {...register("invoiceNo")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">{dateLabel}</label>
-                <input {...register("date")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
+                <input type="date" {...register("date")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">{dueDateLabel}</label>
+                <input type="date" {...register("dueDate")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
               </div>
             </div>
           </section>
@@ -620,6 +722,11 @@ export default function DocumentBuilderPage() {
                       if (selected) {
                         setValue("clientEmail", selected.email || "");
                         setValue("clientAddress", selected.address || "");
+                        const addrParts = (selected.address || "").split(",").map(s => s.trim());
+                        setValue("clientState", selected.state || addrParts[1] || "");
+                        setSelectedClientId(selected.id);
+                      } else {
+                        setSelectedClientId("");
                       }
                     }
                   })} 
@@ -632,11 +739,24 @@ export default function DocumentBuilderPage() {
                   ))}
                 </datalist>
               </div>
-              <div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">State</label>
+                <input {...register("clientState")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Project</label>
+                <select {...register("projectId")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF] bg-white">
+                  <option value="">Select Project (Optional)</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
                 <input {...register("clientEmail")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Address</label>
                 <textarea {...register("clientAddress")} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF] resize-none" />
               </div>
@@ -646,16 +766,20 @@ export default function DocumentBuilderPage() {
           {/* Company Info */}
           <section className="space-y-4">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">{companyLabel}</h2>
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Company Name</label>
                 <input {...register("companyName")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">State</label>
+                <input {...register("companyState")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
+              </div>
+              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
                 <input {...register("companyEmail")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Address</label>
                 <textarea {...register("companyAddress")} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#5438FF] resize-none" />
               </div>
@@ -702,7 +826,7 @@ export default function DocumentBuilderPage() {
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Line Items</h2>
               <button 
                 type="button"
-                onClick={() => append({ name: "", description: "", price: 0, qty: 1, gst: 18 })}
+                onClick={() => append({ name: "", description: "", hsn: "", price: 0, qty: 1, gst: 18 })}
                 className="text-xs font-bold text-[#5438FF] flex items-center gap-1 hover:text-[#4328E0]"
               >
                 <Plus className="w-3 h-3" /> Add Item
@@ -725,11 +849,32 @@ export default function DocumentBuilderPage() {
                   <div className="grid grid-cols-12 gap-3">
                     <div className="col-span-12">
                       <label className="block text-xs font-semibold text-gray-500 mb-1">Item Name</label>
-                      <input {...register(`items.${index}.name` as const)} className="w-full px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
+                      <input 
+                        list={`item-codes-list-${index}`}
+                        {...register(`items.${index}.name` as const, {
+                          onChange: (e) => {
+                            const selected = itemCodes.find(i => i.name === e.target.value);
+                            if (selected) {
+                              setValue(`items.${index}.hsn`, selected.code);
+                            }
+                          }
+                        })} 
+                        className="w-full px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" 
+                        autoComplete="off"
+                      />
+                      <datalist id={`item-codes-list-${index}`}>
+                        {itemCodes.map(c => (
+                          <option key={c.id} value={c.name} />
+                        ))}
+                      </datalist>
                     </div>
-                    <div className="col-span-12">
+                    <div className="col-span-8">
                       <label className="block text-xs font-semibold text-gray-500 mb-1">Description</label>
                       <input {...register(`items.${index}.description` as const)} className="w-full px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">HSN/SAC</label>
+                      <input {...register(`items.${index}.hsn` as const)} className="w-full px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:border-[#5438FF]" />
                     </div>
                     <div className="col-span-3">
                       <label className="block text-xs font-semibold text-gray-500 mb-1">Qty</label>

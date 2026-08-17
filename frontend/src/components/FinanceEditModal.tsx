@@ -54,7 +54,7 @@ export default function FinanceEditModal({
 
   if (!isOpen || !record) return null;
 
-  const clientName = record.project?.client?.name || "Unknown Client";
+  const clientName = record.metadata?.builderData?.clientName || record.project?.client?.name || "Unknown Client";
 
   const handleSave = async () => {
     if (!record) return;

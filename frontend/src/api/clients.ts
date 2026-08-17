@@ -10,7 +10,10 @@ export interface Client {
   email: string;
   phone?: string;
   address?: string;
-  status: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   notes?: string;
   createdAt: string;
   updatedAt: string;

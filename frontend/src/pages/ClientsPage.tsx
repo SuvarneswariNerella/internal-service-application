@@ -12,14 +12,13 @@ import {
   MapPin,
   Star,
   Clock,
-  KeyRound,
   Eye,
+  Wallet,
   FolderOpen,
 } from "lucide-react";
 import PageWrapper from "@/components/ui/PageWrapper";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
-import StatusPill from "@/components/ui/StatusPill";
 import { Card } from "@/components/ui/Card";
 import Skeleton from "@/components/ui/Skeleton";
 import ClientFormModal from "@/components/ClientFormModal";
@@ -52,205 +51,185 @@ function timeAgo(dateStr: string): string {
   return `${diffMonths} months ago`;
 }
 
-function RenewalBadge({ days }: { days: number | null }) {
-  if (days === null) return null;
-
-  let colorClass = "bg-green-50 text-green-700 border-green-200";
-  if (days <= 7) colorClass = "bg-red-50 text-red-700 border-red-200";
-  else if (days <= 15) colorClass = "bg-amber-50 text-amber-700 border-amber-200";
-  else if (days <= 30) colorClass = "bg-orange-50 text-orange-700 border-orange-200";
-
-  return (
-    <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border", colorClass)}>
-      <Clock className="w-3 h-3" />
-      Renewal in {days} Days
-    </span>
-  );
-}
-
-function FadeDivider() {
-  return <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />;
-}
 
 function ClientCard({ client }: { client: Client }) {
   const navigate = useNavigate();
   const [isStarred, setIsStarred] = useState(false);
 
   return (
-    <Card
+    <div
       onClick={() => navigate(`/clients/${client.id}`)}
-      className="overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-200 h-full flex flex-col cursor-pointer group"
+      className="rounded-[20px] bg-white border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer group font-sans"
     >
-      {/* Header + Contact */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-sm">
-              <span className="text-xs font-bold text-white">{getInitials(client.name)}</span>
+      {/* Top Section - Plain Background */}
+      <div className="relative px-4 pt-4 pb-2 bg-transparent">
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              {/* Avatar */}
+              <div className="w-[42px] h-[42px] bg-[#6145FA] rounded-full flex items-center justify-center shrink-0">
+                <span className="text-[16px] font-bold text-white tracking-wide">{getInitials(client.name)}</span>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <h3 className="font-bold text-[#111827] text-[15px] leading-tight tracking-wide truncate">{client.name}</h3>
+                <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-0.5 truncate">{client.company}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 text-sm leading-tight truncate group-hover:text-indigo-600 transition-colors">{client.name}</h3>
-              <p className="text-xs text-gray-500 mt-0.5 truncate">{client.company}</p>
+            
+            <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+              <div className="px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm bg-[#B4F7D8] text-[#059669]">
+                {client.status.charAt(0).toUpperCase() + client.status.slice(1).toLowerCase()}
+              </div>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsStarred(!isStarred); }}
+                className="hover:scale-110 transition-transform p-0.5"
+              >
+                <Star className={cn("w-[18px] h-[18px]", isStarred ? "fill-[#F59E0B] text-[#F59E0B]" : "text-gray-400 opacity-90")} strokeWidth={isStarred ? 2 : 1.5} />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <StatusPill status={client.status} />
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsStarred(!isStarred); }}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
-            >
-              <Star className={cn("w-3.5 h-3.5", isStarred ? "fill-amber-400 text-amber-400" : "text-gray-300")} />
-            </button>
-          </div>
-        </div>
 
-        {/* Contact Info */}
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2 text-gray-600">
-            <User className="w-3 h-3 text-gray-400 shrink-0" />
-            <span className="truncate">{client.contactPerson}</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-            <span className="truncate">{client.email}</span>
-          </div>
-          {client.address && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
-              <span className="truncate">{client.address}</span>
+          {/* Contact Details */}
+          <div className="mt-3 flex flex-col gap-1">
+            <div className="flex items-center gap-2.5 text-gray-600">
+              <div className="w-4 h-4 flex items-center justify-center shrink-0 opacity-90">
+                <User className="w-[13px] h-[13px]" fill="currentColor" strokeWidth={1} />
+              </div>
+              <span className="text-[12px] font-medium tracking-wide truncate">{client.contactPerson}</span>
             </div>
-          )}
+            <div className="flex items-center gap-2.5 text-gray-600">
+              <div className="w-4 h-4 flex items-center justify-center shrink-0 opacity-90">
+                <Mail className="w-[13px] h-[13px]" fill="currentColor" strokeWidth={1} />
+              </div>
+              <span className="text-[12px] font-medium tracking-wide truncate">{client.email}</span>
+            </div>
+            {client.address && (
+              <div className="flex items-center gap-2.5 text-gray-600">
+                <div className="w-4 h-4 flex items-center justify-center shrink-0 opacity-90">
+                  <MapPin className="w-[13px] h-[13px]" fill="currentColor" strokeWidth={1} />
+                </div>
+                <span className="text-[12px] font-medium tracking-wide truncate">{client.address}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <FadeDivider />
-
-      {/* Retainer Value & Active Services KPI Cards */}
-      <div className="px-4 py-3">
+      <div className="p-3 flex flex-col gap-3 flex-1">
+        {/* Retainer & Active Services */}
         <div className="grid grid-cols-2 gap-2.5">
-          <div
-            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
-            className="bg-gray-50 hover:bg-blue-50/80 transition-all rounded-lg px-2.5 py-2 cursor-pointer group/kpi border border-transparent hover:border-blue-200"
-          >
-            <p className="text-[9px] font-medium text-gray-500 uppercase tracking-wider mb-0.5 group-hover/kpi:text-blue-600">Retainer Value</p>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-base font-bold text-gray-900 group-hover/kpi:text-blue-700">₹{(client.retainer ?? 0).toLocaleString("en-IN")}</span>
-              <span className="text-[9px] text-gray-500">/mo</span>
+          <div className="rounded-xl border border-[#EEF0F8] bg-[#F8F9FE] p-2.5 flex items-start justify-between gap-1.5 group/kpi transition-colors hover:border-[#3B4BE8]/30">
+            <div className="flex flex-col min-w-0">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 truncate">Retainer Value</p>
+              <div className="flex items-baseline gap-1 flex-wrap">
+                <span className="text-[17px] font-bold text-[#111827] tracking-tight truncate">₹{(client.retainer ?? 0).toLocaleString("en-IN")}</span>
+                <span className="text-[11px] font-medium text-gray-500">/mo</span>
+              </div>
             </div>
           </div>
-          <div
-            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
-            className="bg-gray-50 hover:bg-green-50/80 transition-all rounded-lg px-2.5 py-2 cursor-pointer group/kpi border border-transparent hover:border-green-200"
-          >
-            <p className="text-[9px] font-medium text-gray-500 uppercase tracking-wider mb-0.5 group-hover/kpi:text-green-600">Active Services</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-base font-bold text-gray-900 group-hover/kpi:text-green-700">{client.activeServices ?? 0}</span>
-              <span className="text-[10px] text-green-600 font-medium">Active</span>
+
+          <div className="rounded-xl border border-[#EEF0F8] bg-[#F8F9FE] p-2.5 flex items-start justify-between gap-1.5 group/kpi transition-colors hover:border-[#10B981]/30">
+            <div className="flex flex-col min-w-0">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 truncate">Active Services</p>
+              <div className="flex items-baseline gap-1 flex-wrap">
+                <span className="text-[17px] font-bold text-[#111827] tracking-tight truncate">{client.activeServices ?? 0}</span>
+                <span className="text-[11px] font-medium text-gray-500">Active</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <FadeDivider />
+        {/* 4 Stats */}
+        <div className="rounded-xl border border-[#EEF0F8] bg-white p-2.5 grid grid-cols-4 gap-1 w-full">
+          <div className="flex flex-col xl:flex-row items-center gap-1.5 justify-center">
+            <div className="w-[28px] h-[28px] rounded-[8px] bg-[#EEF2FF] flex items-center justify-center shrink-0">
+              <Globe className="w-[13px] h-[13px] text-[#3B4BE8]" />
+            </div>
+            <div className="flex flex-col items-center xl:items-start text-center xl:text-left">
+              <span className="text-[13px] font-bold text-[#111827] leading-none mb-0.5">{client._count?.domains ?? 0}</span>
+              <span className="text-[9px] font-medium text-gray-500 leading-none">Domains</span>
+            </div>
+          </div>
 
-      {/* Resource Counts KPI Items */}
-      <div className="px-4 py-3">
-        <div className="grid grid-cols-4 gap-1.5">
-          <div
-            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
-          >
-            <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-              <Globe className="w-3 h-3 text-blue-600" />
+          <div className="flex flex-col xl:flex-row items-center gap-1.5 justify-center">
+            <div className="w-[28px] h-[28px] rounded-[8px] bg-[#F3E8FF] flex items-center justify-center shrink-0">
+              <Server className="w-[13px] h-[13px] text-[#A855F7]" />
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-900 leading-none">{client._count?.domains ?? 0}</p>
-              <p className="text-[9px] text-gray-500 mt-0.5">Domains</p>
+            <div className="flex flex-col items-center xl:items-start text-center xl:text-left">
+              <span className="text-[13px] font-bold text-[#111827] leading-none mb-0.5">{client._count?.servers ?? 0}</span>
+              <span className="text-[9px] font-medium text-gray-500 leading-none">Servers</span>
             </div>
           </div>
-          <div
-            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-violet-50 transition-colors cursor-pointer"
-          >
-            <div className="w-6 h-6 rounded-md bg-violet-50 flex items-center justify-center shrink-0">
-              <Server className="w-3 h-3 text-violet-600" />
+
+          <div className="flex flex-col xl:flex-row items-center gap-1.5 justify-center">
+            <div className="w-[28px] h-[28px] rounded-[8px] bg-[#DCFCE7] flex items-center justify-center shrink-0">
+              <FolderKanban className="w-[13px] h-[13px] text-[#22C55E]" />
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-900 leading-none">{client._count?.servers ?? 0}</p>
-              <p className="text-[9px] text-gray-500 mt-0.5">Servers</p>
+            <div className="flex flex-col items-center xl:items-start text-center xl:text-left">
+              <span className="text-[13px] font-bold text-[#111827] leading-none mb-0.5">{client._count?.projects ?? 0}</span>
+              <span className="text-[9px] font-medium text-gray-500 leading-none">Projects</span>
             </div>
           </div>
-          <div
-            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer"
-          >
-            <div className="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
-              <FolderKanban className="w-3 h-3 text-emerald-600" />
+
+          <div className="flex flex-col xl:flex-row items-center gap-1.5 justify-center">
+            <div className="w-[28px] h-[28px] rounded-[8px] bg-[#FFEDD5] flex items-center justify-center shrink-0">
+              <FolderOpen className="w-[13px] h-[13px] text-[#F97316]" />
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-900 leading-none">{client._count?.projects ?? 0}</p>
-              <p className="text-[9px] text-gray-500 mt-0.5">Projects</p>
-            </div>
-          </div>
-          <div
-            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer"
-          >
-            <div className="w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center shrink-0">
-              <FolderOpen className="w-3 h-3 text-amber-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-900 leading-none">{client.assetCount ?? 0}</p>
-              <p className="text-[9px] text-gray-500 mt-0.5">Assets</p>
+            <div className="flex flex-col items-center xl:items-start text-center xl:text-left">
+              <span className="text-[13px] font-bold text-[#111827] leading-none mb-0.5">{client.assetCount ?? 0}</span>
+              <span className="text-[9px] font-medium text-gray-500 leading-none">Assets</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <FadeDivider />
-
-      {/* Tech Tags + Renewal & Updated */}
-      <div className="px-4 py-3 space-y-2">
-        <div className="flex flex-wrap items-center gap-1">
+        {/* Tags Row */}
+        <div className="flex flex-wrap items-center gap-2 mt-1 mb-2">
           {(client.technologies ?? []).slice(0, 2).map((tech) => (
-            <span key={tech} className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-medium text-gray-600 border border-gray-200">
+            <span key={tech} className="inline-flex items-center px-2.5 py-1 rounded-[6px] text-[12px] font-medium border bg-gray-50 text-gray-800 border-gray-200">
               {tech}
             </span>
           ))}
           {(client.technologies?.length ?? 0) > 2 && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-[10px] font-medium text-indigo-600 border border-indigo-200">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-[6px] text-[12px] font-medium border bg-gray-50 text-gray-800 border-gray-200">
               +{client.technologies!.length - 2} More
             </span>
           )}
         </div>
 
+        {/* Updated & Renewal */}
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-gray-400">Updated {timeAgo(client.updatedAt)}</span>
-          <RenewalBadge days={client.daysUntilRenewal ?? null} />
+          <span className="text-[12px] font-medium text-gray-500">Updated {timeAgo(client.updatedAt)}</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFF7ED] border border-[#FFEDD5] text-[#EA580C] text-[12px] font-bold">
+            <Clock className="w-[14px] h-[14px]" />
+            {client.daysUntilRenewal !== null ? `Renewal in ${client.daysUntilRenewal} Days` : 'No Expiry'}
+          </div>
         </div>
       </div>
 
-      {/* Action Buttons: View Profile, Credentials (Edit Client removed) */}
-      <div className="mt-auto">
-        <FadeDivider />
-        <div className="grid grid-cols-2 divide-x divide-gray-100">
-          <button
-            onClick={() => navigate(`/clients/${client.id}`)}
-            className="flex flex-col items-center gap-0.5 py-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">View Profile</span>
-          </button>
-          <button
-            onClick={() => navigate(`/clients/${client.id}`)}
-            className="flex flex-col items-center gap-0.5 py-2.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">Credentials</span>
-          </button>
-        </div>
+      {/* Action Buttons */}
+      <div className="mt-auto grid grid-cols-2 divide-x divide-gray-200/80 border-t border-[#EEF0F8] bg-[#F8F9FE]">
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
+          className="flex items-center justify-center gap-2 py-3 text-[#3B4BE8] hover:bg-[#EEF2FF] transition-colors group/btn"
+        >
+          <div className="w-[24px] h-[24px] rounded-[6px] bg-[#EEF2FF] flex items-center justify-center border border-[#E0E7FF] group-hover/btn:bg-white group-hover/btn:border-transparent transition-all">
+            <Eye className="w-[13px] h-[13px]" />
+          </div>
+          <span className="text-[12px] font-bold tracking-wide">View Profile</span>
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/finance?clientId=${client.id}`); }}
+          className="flex items-center justify-center gap-2 py-3 text-[#3B4BE8] hover:bg-[#EEF2FF] transition-colors group/btn"
+        >
+          <div className="w-[24px] h-[24px] rounded-[6px] bg-[#EEF2FF] flex items-center justify-center border border-[#E0E7FF] group-hover/btn:bg-white group-hover/btn:border-transparent transition-all">
+            <Wallet className="w-[13px] h-[13px]" />
+          </div>
+          <span className="text-[12px] font-bold tracking-wide">Finance</span>
+        </button>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -374,7 +353,7 @@ export default function ClientsPage() {
           <p className="text-gray-500">No clients found</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
           {clients.map((client) => (
             <ClientCard key={client.id} client={client} />
           ))}

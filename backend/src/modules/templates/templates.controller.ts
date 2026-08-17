@@ -27,7 +27,7 @@ export const getTemplates = async (req: Request, res: Response) => {
 
 export const getTemplate = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const template = await prisma.designTemplate.findUnique({
       where: { id }
     });
@@ -74,7 +74,7 @@ export const createTemplate = async (req: Request, res: Response) => {
 
 export const updateTemplate = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const data = updateTemplateSchema.parse(req.body);
 
     const template = await prisma.designTemplate.findUnique({ where: { id } });
@@ -111,7 +111,7 @@ export const updateTemplate = async (req: Request, res: Response) => {
 
 export const deleteTemplate = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await prisma.designTemplate.delete({
       where: { id }
     });

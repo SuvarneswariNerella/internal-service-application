@@ -42,7 +42,6 @@ export async function listClients(req: Request, res: Response): Promise<void> {
             select: {
               technology: true,
               status: true,
-              billing: { select: { amount: true } },
               assets: true,
             },
           },
@@ -69,7 +68,6 @@ export async function listClients(req: Request, res: Response): Promise<void> {
             select: {
               technology: true,
               status: true,
-              billing: { select: { amount: true } },
               assets: true,
             },
           },
@@ -101,7 +99,7 @@ export async function listClients(req: Request, res: Response): Promise<void> {
       if (p.technology) {
         p.technology.split(",").map((t: string) => t.trim()).filter(Boolean).forEach((t: string) => techSet.add(t));
       }
-      p.billing?.forEach((b: any) => { totalBilling += Number(b.amount); });
+      // Billing logic moved to FinanceRecord
       if (p.assets) {
         if (p.assets.gitRepo) assetCount++;
         if (p.assets.productionUrl) assetCount++;
@@ -139,6 +137,9 @@ export async function listClients(req: Request, res: Response): Promise<void> {
       email: client.email,
       phone: client.phone,
       address: client.address,
+      state: client.state,
+      city: client.city,
+      pincode: client.pincode,
       status: client.status,
       notes: client.notes,
       retainer: client.retainer,
@@ -276,7 +277,7 @@ export async function deleteClient(req: Request, res: Response): Promise<void> {
   const urlIds = client.shortUrls.map((u) => u.id);
 
   await prisma.$transaction([
-    prisma.billing.deleteMany({ where: { projectId: { in: projectIds } } }),
+    // prisma.billing.deleteMany({ where: { projectId: { in: projectIds } } }), // Removed legacy billing table
     prisma.credential.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.asset.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.financeRecord.deleteMany({ where: { projectId: { in: projectIds } } }),

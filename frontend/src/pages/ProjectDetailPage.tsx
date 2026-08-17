@@ -29,10 +29,12 @@ import {
   X,
   Lock,
   Globe,
-  Server as ServerIcon,
   Globe as GlobeIcon,
+  Server as ServerIcon,
   Terminal,
   Wallet,
+  Download,
+  Check,
 } from "lucide-react";
 import PageWrapper from "@/components/ui/PageWrapper";
 import Button from "@/components/ui/Button";
@@ -42,6 +44,9 @@ import Skeleton from "@/components/ui/Skeleton";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import ProjectAssetsModal from "@/components/ProjectAssetsModal";
+import FinanceDocumentViewModal from "@/components/FinanceDocumentViewModal";
+import FinanceEditModal from "@/components/FinanceEditModal";
+import { format } from "date-fns";
 import { useToastStore } from "@/store/toastStore";
 import { projectsApi, type Project, type Asset } from "@/api/projects";
 import { credentialsApi } from "@/api/credentials";
@@ -170,6 +175,11 @@ export default function ProjectDetailPage() {
   const [linkedDomains, setLinkedDomains] = useState<Domain[]>([]);
   const [projectFinanceRecords, setProjectFinanceRecords] = useState<FinanceRecord[]>([]);
 
+  // Finance states
+  const [viewingRecord, setViewingRecord] = useState<FinanceRecord | null>(null);
+  const [quickEditRecord, setQuickEditRecord] = useState<FinanceRecord | null>(null);
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+
   const fetchProject = async () => {
     if (!id) return;
     setIsLoading(true);
@@ -268,6 +278,52 @@ export default function ProjectDetailPage() {
     if (text) {
       navigator.clipboard.writeText(text);
       addToast(`${label} copied to clipboard!`, "success");
+    }
+  };
+
+  const handleDuplicate = async (record: FinanceRecord) => {
+    try {
+      const duplicatePayload = {
+        projectId: record.projectId,
+        type: record.type,
+        title: `${record.title}-COPY`,
+        amount: Number(record.amount),
+        currency: record.currency || "INR",
+        status: "DRAFT",
+        dueDate: record.dueDate,
+        notes: record.notes,
+        metadata: record.metadata
+      };
+      const res = await financeApi.create(duplicatePayload);
+      if (res.data.success) {
+        addToast("Document duplicated successfully", "success");
+        setViewingRecord(null);
+        // refresh finance records
+        const pId = project?.id || id || "";
+        financeApi.list({ projectId: pId }).then(fRes => setProjectFinanceRecords(fRes.data?.data || []));
+      }
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to duplicate document", "error");
+    }
+  };
+
+  const handleMarkPaid = async (record: FinanceRecord) => {
+    try {
+      setMarkingPaidId(record.id);
+      await financeApi.update(record.id, { 
+        status: "PAID",
+        paidDate: new Date().toISOString()
+      });
+      addToast("Document marked as paid", "success");
+      // refresh finance records
+      const pId = project?.id || id || "";
+      financeApi.list({ projectId: pId }).then(fRes => setProjectFinanceRecords(fRes.data?.data || []));
+    } catch (error) {
+      console.error("Failed to mark as paid:", error);
+      addToast("Failed to update status", "error");
+    } finally {
+      setMarkingPaidId(null);
     }
   };
 
@@ -971,42 +1027,121 @@ export default function ProjectDetailPage() {
           <CardContent className="p-0">
             {projectFinanceRecords && projectFinanceRecords.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">
-                      <th className="p-4 font-semibold">Title</th>
-                      <th className="p-4 font-semibold">Type</th>
-                      <th className="p-4 font-semibold">Amount</th>
-                      <th className="p-4 font-semibold">Status</th>
+                    <tr className="bg-white border-b border-gray-200">
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Client</th>
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Document ID</th>
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest text-center">Type</th>
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest text-right">Amount (₹)</th>
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Issue Date</th>
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Status</th>
+                      <th className="px-6 py-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {projectFinanceRecords.map(record => (
-                      <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="p-4">
-                          <p className="font-semibold text-gray-900">{record.title}</p>
-                        </td>
-                        <td className="p-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-medium">
-                            <FileText className="w-3.5 h-3.5" />
-                            {record.type}
-                          </span>
-                        </td>
-                        <td className="p-4 font-mono font-bold text-gray-900">
-                          ₹{Number(record.amount).toLocaleString()}
-                        </td>
-                        <td className="p-4">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border
-                            ${record.status === "PAID" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : 
-                              record.status === "PENDING" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                              record.status === "OVERDUE" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                              "bg-gray-50 text-gray-700 border-gray-200"}`}
-                          >
-                            {record.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {projectFinanceRecords.map(record => {
+                      const clientName = record.client?.name || record.project?.client?.name || record.metadata?.builderData?.clientName || "Unknown Client";
+                      const docTitle = record.title || "Untitled Document";
+                      const docDesc = record.project?.name || "General Maintenance";
+                      const isPaid = record.status === "PAID";
+                      const isDraft = record.status === "DRAFT" || record.status === "PENDING";
+                      
+                      let displayType = record.type.startsWith("PURCHASE_ORDER") ? "PO" : 
+                                        record.type === "QUOTATION" ? "Estimate" : 
+                                        record.type.charAt(0) + record.type.slice(1).toLowerCase();
+                      if (record.type === "PURCHASE_ORDER_OUTGOING") {
+                        displayType += " (Outgoing)";
+                      } else if (record.type === "PURCHASE_ORDER_INCOMING") {
+                        displayType += " (Incoming)";
+                      } else if (record.type === "PURCHASE_ORDER" && record.metadata?.poDirection) {
+                        displayType += record.metadata.poDirection === "OUTGOING" ? " (Outgoing)" : " (Incoming)";
+                      }
+                      
+                      return (
+                        <tr key={record.id} className="hover:bg-gray-50/80 transition-colors group">
+                          <td className="px-6 py-5">
+                            <div className="font-bold text-[#111827] text-[14px] whitespace-normal max-w-[180px] leading-snug">
+                              {clientName}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 text-gray-400">
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-[#111827] text-[14px]">{docTitle}</div>
+                                <div className="text-[12px] font-medium text-gray-500 truncate max-w-[250px]">{docDesc}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-center">
+                            <span className="inline-block px-3 py-1 rounded-md bg-gray-50 text-gray-600 text-[13px] font-semibold border border-gray-200">
+                              {displayType}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-right font-extrabold text-[#111827] text-[14px]">
+                            ₹{Number(record.amount).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="text-[13px] font-semibold text-gray-600">
+                              {record.createdAt ? format(new Date(record.createdAt), "yyyy-MM-dd") : "-"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-bold ${
+                              isPaid ? "text-emerald-700 bg-emerald-50 border border-emerald-100" :
+                              isDraft ? "text-gray-700 bg-gray-100 border border-gray-200" :
+                              record.status === "OVERDUE" ? "text-rose-700 bg-rose-50 border border-rose-100" :
+                              "text-blue-700 bg-blue-50 border border-blue-100"
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                isPaid ? "bg-emerald-500" :
+                                isDraft ? "bg-gray-500" :
+                                record.status === "OVERDUE" ? "bg-rose-500" :
+                                "bg-blue-500"
+                              }`} />
+                              {record.status.charAt(0) + record.status.slice(1).toLowerCase()}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
+                                onClick={() => setViewingRecord(record)}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button 
+                                className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
+                                onClick={() => {
+                                  setViewingRecord(record);
+                                  setTimeout(() => window.print(), 500);
+                                }}
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                              {isPaid ? (
+                                <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 text-[12px] font-bold hover:bg-emerald-50 transition-colors">
+                                  <Check className="w-3.5 h-3.5" />
+                                  Paid
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleMarkPaid(record)}
+                                  disabled={markingPaidId === record.id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                >
+                                  {markingPaidId === record.id ? <div className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : null}
+                                  Mark Paid
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1214,6 +1349,52 @@ export default function ProjectDetailPage() {
         currentAssets={activeProject.assets}
         onSuccess={(updatedAssets) => {
           setProject((prev) => (prev ? { ...prev, assets: updatedAssets } : prev));
+        }}
+      />
+      <FinanceDocumentViewModal
+        isOpen={!!viewingRecord}
+        onClose={() => setViewingRecord(null)}
+        record={viewingRecord}
+        onEdit={(r) => {
+          setViewingRecord(null);
+          setQuickEditRecord(r);
+        }}
+        onDuplicate={handleDuplicate}
+        onViewInvoice={async (invoiceId) => {
+          try {
+            const res = await financeApi.get(invoiceId);
+            if (res.data.success && res.data.data) {
+              setViewingRecord(res.data.data);
+            }
+          } catch (err) {
+            console.error(err);
+            addToast("Failed to fetch invoice details", "error");
+          }
+        }}
+        onConvertSuccess={async (newInvoiceId) => {
+          try {
+            const pId = project?.id || id || "";
+            financeApi.list({ projectId: pId }).then(fRes => setProjectFinanceRecords(fRes.data?.data || []));
+            const res = await financeApi.get(newInvoiceId);
+            if (res.data.success && res.data.data) {
+              setViewingRecord(res.data.data);
+              addToast("Invoice created successfully", "success");
+            }
+          } catch (err) {
+            console.error(err);
+            const pId = project?.id || id || "";
+            financeApi.list({ projectId: pId }).then(fRes => setProjectFinanceRecords(fRes.data?.data || []));
+          }
+        }}
+      />
+
+      <FinanceEditModal
+        isOpen={!!quickEditRecord}
+        onClose={() => setQuickEditRecord(null)}
+        record={quickEditRecord}
+        onSuccess={() => {
+          const pId = project?.id || id || "";
+          financeApi.list({ projectId: pId }).then(fRes => setProjectFinanceRecords(fRes.data?.data || []));
         }}
       />
     </PageWrapper>

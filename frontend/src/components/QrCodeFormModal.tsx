@@ -260,7 +260,7 @@ export default function QrCodeFormModal({
     if (selectedId) {
       const selected = shortUrls.find((u) => u.id === selectedId);
       if (selected) {
-        const domainHost = selected.domain?.domain ? `http://${selected.domain.domain}` : window.location.origin;
+        const domainHost = (selected as any).domain?.domain ? `http://${(selected as any).domain.domain}` : window.location.origin;
         const fullShortUrl = `${domainHost}/s/${selected.shortCode}`;
         setContent(fullShortUrl);
         setIsContentLocked(true);

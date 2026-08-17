@@ -8,7 +8,6 @@ import authRoutes from "@/modules/auth/auth.routes";
 import clientRoutes from "@/modules/clients/clients.routes";
 import projectRoutes from "@/modules/projects/projects.routes";
 import credentialRoutes from "@/modules/credentials/credentials.routes";
-import billingRoutes from "@/modules/billing/billing.routes";
 import serverRoutes from "@/modules/servers/servers.routes";
 import domainRoutes from "@/modules/domains/domains.routes";
 import reminderRoutes from "@/modules/reminders/reminders.routes";
@@ -24,6 +23,7 @@ import settingsRoutes from "@/modules/settings/settings.routes";
 import maintenanceRoutes from "@/modules/maintenance/maintenance.routes";
 import templateRoutes from "@/modules/templates/templates.routes";
 import usersRoutes from "@/modules/users/users.routes";
+import itemsRoutes from "@/modules/items/items.routes";
 import { redirectShortUrl } from "@/modules/urls/controller";
 import { startCronJobs } from "@/utils/cron";
 
@@ -49,7 +49,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/credentials", credentialRoutes);
-app.use("/api/billing", billingRoutes);
 app.use("/api/servers", serverRoutes);
 app.use("/api/domains", domainRoutes);
 app.use("/api/reminders", reminderRoutes);
@@ -65,6 +64,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/items", itemsRoutes);
 
 app.use(errorHandler);
 

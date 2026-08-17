@@ -15,6 +15,7 @@ import {
 import { clientsApi, type Client } from "@/api/clients";
 import { useToastStore } from "@/store/toastStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import { State, City } from "country-state-city";
 
 const INDUSTRIES = [
   "Technology & SaaS",
@@ -53,13 +54,7 @@ const COUNTRY_CODES = [
   { code: "+971", flag: "🇦🇪", label: "AE +971", name: "United Arab Emirates" },
 ];
 
-const INDIAN_STATES = [
-  "Maharashtra", "Karnataka", "Delhi", "Tamil Nadu", "Telangana",
-  "Gujarat", "Haryana", "Uttar Pradesh", "West Bengal", "Rajasthan",
-  "Madhya Pradesh", "Kerala", "Punjab", "Odisha", "Bihar",
-  "Andhra Pradesh", "Jharkhand", "Chhattisgarh", "Assam", "Goa",
-  "Other",
-];
+const INDIAN_STATES_DATA = State.getStatesOfCountry("IN");
 
 function FormField({
   label,
@@ -135,10 +130,10 @@ export default function ClientFormModal({
     legalEntityName: "",
     mrr: "",
     gstin: "",
-    state: "Maharashtra",
+    state: "",
     streetAddress: "",
-    city: "Mumbai",
-    postalCode: "400013",
+    city: "",
+    postalCode: "",
     country: "India",
     contactPerson: "",
     contactEmail: "",
@@ -152,6 +147,9 @@ export default function ClientFormModal({
 
   const [customState, setCustomState] = useState("");
   const [isCustomState, setIsCustomState] = useState(false);
+
+  const [customCity, setCustomCity] = useState("");
+  const [isCustomCity, setIsCustomCity] = useState(false);
 
   const isEdit = !!client;
 
@@ -177,8 +175,17 @@ export default function ClientFormModal({
       const rawIndustry = industryMatch?.[1] ? industryMatch[1].trim() : "";
       const isStandardInd = INDUSTRIES.includes(rawIndustry);
 
-      const rawState = addrParts[1] || "Maharashtra";
-      const isStandardSt = INDIAN_STATES.includes(rawState);
+      const rawState = client.state || addrParts[1] || "";
+      const rawCity = client.city || addrParts[2] || "";
+      const rawPincode = client.pincode || addrParts[3] || "";
+
+      const isStandardSt = INDIAN_STATES_DATA.some(s => s.name === rawState);
+      let isStandardCity = false;
+      if (isStandardSt) {
+        const selSt = INDIAN_STATES_DATA.find(s => s.name === rawState);
+        const cities = selSt ? City.getCitiesOfState("IN", selSt.isoCode) : [];
+        isStandardCity = cities.some(c => c.name === rawCity);
+      }
 
       setForm({
         name: client.name || "",
@@ -186,10 +193,10 @@ export default function ClientFormModal({
         legalEntityName: legalMatch?.[1] ? legalMatch[1].trim() : client.company || "",
         mrr: client.retainer ? String(client.retainer) : mrrMatch?.[1] ? mrrMatch[1].replace(/[^0-9]/g, "") : "",
         gstin: gstinMatch?.[1] ? gstinMatch[1].trim() : "",
-        state: isStandardSt ? rawState : rawState ? "Other" : "Maharashtra",
+        state: rawState,
         streetAddress: addrParts[0] || "",
-        city: addrParts[2] || "Mumbai",
-        postalCode: addrParts[3] || "400013",
+        city: rawCity,
+        postalCode: rawPincode,
         country: addrParts[4] || "India",
         contactPerson: client.contactPerson || "",
         contactEmail: client.email || "",
@@ -212,6 +219,14 @@ export default function ClientFormModal({
       } else {
         setCustomState("");
         setIsCustomState(false);
+      }
+
+      if (!isStandardCity && rawCity) {
+        setCustomCity(rawCity);
+        setIsCustomCity(true);
+      } else {
+        setCustomCity("");
+        setIsCustomCity(false);
       }
 
       setCountryCode(code);
@@ -254,6 +269,7 @@ export default function ClientFormModal({
       const fullPhone = form.phone.trim() ? `${countryCode} ${form.phone.trim()}` : "";
       const finalIndustry = (form.industry === "Other" || isCustomIndustry) ? (customIndustry.trim() || "Other") : form.industry;
       const finalState = (form.state === "Other" || isCustomState) ? (customState.trim() || "Other") : form.state;
+      const finalCity = (form.city === "Other" || isCustomCity) ? (customCity.trim() || "Other") : form.city;
 
       const payload = {
         name: form.name,
@@ -261,7 +277,10 @@ export default function ClientFormModal({
         contactPerson: form.contactPerson,
         email: form.contactEmail,
         phone: fullPhone,
-        address: [form.streetAddress, finalState, form.city, form.postalCode, form.country]
+        state: finalState,
+        city: finalCity,
+        pincode: form.postalCode,
+        address: [form.streetAddress, finalState, finalCity, form.postalCode, form.country]
           .filter(Boolean)
           .join(", "),
         status: client?.status || "ACTIVE",
@@ -509,7 +528,7 @@ export default function ClientFormModal({
                     <input
                       type="text"
                       className="w-full h-full pl-2.5 pr-7 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
-                      placeholder="Enter state name..."
+                      placeholder="Enter custom state..."
                       value={customState}
                       onChange={(e) => setCustomState(e.target.value)}
                       autoFocus
@@ -518,7 +537,7 @@ export default function ClientFormModal({
                       type="button"
                       onClick={() => {
                         setIsCustomState(false);
-                        set("state", "Maharashtra");
+                        set("state", "");
                         setCustomState("");
                       }}
                       className="absolute right-2 p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
@@ -536,17 +555,23 @@ export default function ClientFormModal({
                         if (e.target.value === "Other") {
                           set("state", "Other");
                           setIsCustomState(true);
+                          set("city", "Other"); // If custom state, city also defaults to custom
+                          setIsCustomCity(true);
                         } else {
                           set("state", e.target.value);
                           setIsCustomState(false);
                           setCustomState("");
+                          set("city", "");
+                          setIsCustomCity(false);
+                          setCustomCity("");
                         }
                       }}
                     >
                       <option value="" className="text-gray-400">Select state</option>
-                      {INDIAN_STATES.map((st) => (
-                        <option key={st} value={st} className="text-gray-900">{st}</option>
+                      {INDIAN_STATES_DATA.map((st) => (
+                        <option key={st.isoCode} value={st.name} className="text-gray-900">{st.name}</option>
                       ))}
+                      <option value="Other" className="text-gray-900">Other (Custom)</option>
                     </select>
                     <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
                   </>
@@ -558,13 +583,58 @@ export default function ClientFormModal({
                 badge={<Building className="w-3.5 h-3.5" />}
                 badgeBg="bg-purple-50 text-purple-600 border-purple-100"
               >
-                <input
-                  type="text"
-                  className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
-                  placeholder="Mumbai"
-                  value={form.city}
-                  onChange={(e) => set("city", e.target.value)}
-                />
+                {form.city === "Other" || isCustomCity ? (
+                  <div className="relative flex items-center w-full h-full">
+                    <input
+                      type="text"
+                      className="w-full h-full pl-2.5 pr-7 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
+                      placeholder="Enter custom city..."
+                      value={customCity}
+                      onChange={(e) => setCustomCity(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCity(false);
+                        set("city", "");
+                        setCustomCity("");
+                      }}
+                      className="absolute right-2 p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                      title="Back to select list"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 appearance-none focus:outline-none cursor-pointer font-medium disabled:opacity-50"
+                      value={form.city}
+                      onChange={(e) => {
+                        if (e.target.value === "Other") {
+                          set("city", "Other");
+                          setIsCustomCity(true);
+                        } else {
+                          set("city", e.target.value);
+                          setIsCustomCity(false);
+                          setCustomCity("");
+                        }
+                      }}
+                      disabled={!form.state}
+                    >
+                      <option value="" className="text-gray-400">Select city</option>
+                      {(function() {
+                        const selSt = INDIAN_STATES_DATA.find(s => s.name === form.state);
+                        return selSt ? City.getCitiesOfState("IN", selSt.isoCode).map((ct) => (
+                          <option key={ct.name} value={ct.name} className="text-gray-900">{ct.name}</option>
+                        )) : null;
+                      })()}
+                      {form.state && <option value="Other" className="text-gray-900">Other (Custom)</option>}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
+                  </>
+                )}
               </InputBox>
 
               {/* 3. Pincode / Postal Code */}
@@ -575,9 +645,9 @@ export default function ClientFormModal({
                 <input
                   type="text"
                   className="w-full h-full px-2.5 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none font-medium"
-                  placeholder="400013"
+                  placeholder="e.g. 400013"
                   value={form.postalCode}
-                  onChange={(e) => set("postalCode", e.target.value)}
+                  onChange={(e) => set("postalCode", e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
                 />
               </InputBox>
             </div>

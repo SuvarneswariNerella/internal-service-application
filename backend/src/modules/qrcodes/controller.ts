@@ -398,6 +398,7 @@ export async function listQrCodes(req: Request, res: Response, next: NextFunctio
     if (workspaceId) where.workspaceId = workspaceId;
     if (type) where.type = type;
     if (status) where.status = status;
+    where.shortUrlId = null; // Exclude QR codes created for URL shortener
 
     const skip = (Number(page) - 1) * Number(pageSize);
     const take = Number(pageSize);
@@ -422,8 +423,8 @@ export async function listQrCodes(req: Request, res: Response, next: NextFunctio
       ]);
     } catch {
       // Fallback SQL query if prisma client model is cached
-      const rawRows: any = await prisma.$queryRawUnsafe(`SELECT * FROM QrCode ORDER BY createdAt DESC LIMIT ? OFFSET ?`, take, skip);
-      const countRes: any = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as total FROM QrCode`);
+      const rawRows: any = await prisma.$queryRawUnsafe(`SELECT * FROM QrCode WHERE shortUrlId IS NULL ORDER BY createdAt DESC LIMIT ? OFFSET ?`, take, skip);
+      const countRes: any = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as total FROM QrCode WHERE shortUrlId IS NULL`);
       total = Number(countRes[0]?.total || 0);
       data = Array.isArray(rawRows) ? rawRows : [];
     }

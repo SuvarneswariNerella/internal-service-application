@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, Send, FileText, Loader2 } from "lucide-react";
 import { financeApi, FinanceRecord } from "@/api/finance";
 

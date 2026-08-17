@@ -3,7 +3,12 @@ import type { ApiResponse } from "@/types";
 
 export interface FinanceRecord {
   id: string;
-  projectId: string;
+  projectId?: string;
+  clientId?: string;
+  client?: {
+    id: string;
+    name: string;
+  };
   project?: {
     name: string;
     clientId: string;

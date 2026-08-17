@@ -51,10 +51,13 @@ export default function FinancePage() {
   }, [globalWorkspaceId]);
 
   const filteredRecords = records.filter(r => {
+    const clientName = (r.client?.name || r.project?.client?.name || r.metadata?.builderData?.clientName || "").toLowerCase();
+    const projectName = (r.project?.name || "").toLowerCase();
     const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase()) || 
-                          r.project?.name?.toLowerCase().includes(search.toLowerCase()) ||
-                          r.project?.client?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "ALL" || r.status === statusFilter;
+                          projectName.includes(search.toLowerCase()) ||
+                          clientName.includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "ALL" || 
+                          (statusFilter === "PENDING" ? (r.status === "PENDING" || r.status === "DRAFT") : r.status === statusFilter);
     const matchesType = typeFilter === "ALL" || 
                         (typeFilter === "PURCHASE_ORDER" ? r.type.startsWith("PURCHASE_ORDER") : r.type === typeFilter);
     // Add tab filtering logic here if needed (e.g. Invoices tab)
@@ -62,7 +65,8 @@ export default function FinancePage() {
                        (activeTab === "Invoices" && r.type === "INVOICE") ||
                        (activeTab === "Estimates/Proposals" && r.type === "QUOTATION") ||
                        (activeTab === "Purchase Orders" && r.type.startsWith("PURCHASE_ORDER"));
-    const matchesClient = clientFilter === "ALL" || r.project?.clientId === clientFilter;
+    const actualClientId = r.clientId || r.project?.clientId;
+    const matchesClient = clientFilter === "ALL" || actualClientId === clientFilter;
     
     return matchesSearch && matchesStatus && matchesType && matchesTab && matchesClient;
   });
@@ -70,7 +74,7 @@ export default function FinancePage() {
   const uniqueClients = Array.from(
     new Map(
       records
-        .map(r => r.project?.client)
+        .map(r => r.client || r.project?.client)
         .filter((c): c is NonNullable<typeof c> => !!c)
         .map(c => [c.id, c])
     ).values()
@@ -134,7 +138,7 @@ export default function FinancePage() {
   const handleUseTemplate = (template: any) => {
     let docType = "invoice";
     if (template.type === "PROPOSALS") docType = "estimate";
-    if (template.type === "PURCHASE_ORDERS") docType = "po";
+    if (template.type === "PURCHASE_ORDERS" || template.type === "PURCHASE_ORDER") docType = "po";
     
     navigate(`/finance/document-builder?type=${docType}&templateId=${template.id}`);
   };
@@ -322,7 +326,7 @@ export default function FinancePage() {
                 </tr>
               ) : (
                 filteredRecords.map(record => {
-                  const clientName = record.project?.client?.name || "Unknown Client";
+                  const clientName = record.client?.name || record.project?.client?.name || record.metadata?.builderData?.clientName || "Unknown Client";
                   const docTitle = record.title || "Untitled Document";
                   const docDesc = record.project?.name || "General Maintenance";
                   const isPaid = record.status === "PAID";

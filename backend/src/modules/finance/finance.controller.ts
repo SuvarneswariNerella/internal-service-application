@@ -284,6 +284,7 @@ export const convertFinanceDocument = async (req: Request, res: Response) => {
       prisma.financeRecord.create({
         data: {
           projectId: sourcePo.projectId,
+          clientId: sourcePo.clientId,
           type: "INVOICE",
           title: invoiceTitle,
           amount: sourcePo.amount,

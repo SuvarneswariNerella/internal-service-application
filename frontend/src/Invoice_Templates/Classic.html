@@ -2322,6 +2322,10 @@ hr {
   Will apply only print window
 ----------------------------------------------------------------*/
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   .tm_gray_bg {
     background-color: #f5f6fa !important;
     -webkit-print-color-adjust: exact;
@@ -2693,6 +2697,7 @@ hr {
             <div class="tm_invoice_info_list tm_white_color">
               <p class="tm_invoice_number tm_m0">Invoice No: <b>#LL93784</b></p>
               <p class="tm_invoice_date tm_m0">Date: <b>01.07.2022</b></p>
+              <p class="tm_invoice_date tm_m0">Due Date: <b>30.07.2022</b></p>
             </div>
             <div class="tm_invoice_seperator tm_accent_bg"></div>
           </div>
@@ -2723,6 +2728,7 @@ hr {
                     <tr class="tm_accent_bg">
                       <th class="tm_width_3 tm_semi_bold tm_white_color">Item</th>
                       <th class="tm_width_3 tm_semi_bold tm_white_color">Description</th>
+                      <th class="tm_width_2 tm_semi_bold tm_white_color">HSN/SAC</th>
                       <th class="tm_width_2 tm_semi_bold tm_white_color">Price</th>
                       <th class="tm_width_1 tm_semi_bold tm_white_color">Qty</th>
                       <th class="tm_width_1 tm_semi_bold tm_white_color">GST %</th>
@@ -2733,6 +2739,7 @@ hr {
                     <tr>
                       <td class="tm_width_3">1. Website Design</td>
                       <td class="tm_width_3">Six web page designs and three times revision</td>
+                      <td class="tm_width_2"></td>
                       <td class="tm_width_2">$350</td>
                       <td class="tm_width_1">1</td>
                       <td class="tm_width_1">18%</td>
@@ -2741,6 +2748,7 @@ hr {
                     <tr>
                       <td class="tm_width_3">2. Web Development</td>
                       <td class="tm_width_3">Convert pixel-perfect frontend and make it dynamic</td>
+                      <td class="tm_width_2"></td>
                       <td class="tm_width_2">$600</td>
                       <td class="tm_width_1">1</td>
                       <td class="tm_width_1">18%</td>
@@ -2749,7 +2757,8 @@ hr {
                     <tr>
                       <td class="tm_width_3">3. App Development</td>
                       <td class="tm_width_3">Android & Ios Application Development</td>
-                      <td class="tm_width_2">$200</td>
+                      <td class="tm_width_2"></td>
+                      <td class="tm_width_2">$250</td>
                       <td class="tm_width_1">2</td>
                       <td class="tm_width_1">18%</td>
                       <td class="tm_width_2 tm_text_right">$400</td>
@@ -2757,7 +2766,7 @@ hr {
                     <tr>
                       <td class="tm_width_3">4. Digital Marketing</td>
                       <td class="tm_width_3">Facebook, Youtube and Google Marketing</td>
-                      <td class="tm_width_2">$100</td>
+                      <td class="tm_width_2"></td>`n                      <td class="tm_width_2">$100</td>
                       <td class="tm_width_1">3</td>
                       <td class="tm_width_1">18%</td>
                       <td class="tm_width_2 tm_text_right">$300</td>
@@ -2814,3 +2823,4 @@ hr {
 
 </body>
 </html>
+

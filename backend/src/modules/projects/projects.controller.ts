@@ -29,7 +29,7 @@ export async function listProjects(req: Request, res: Response): Promise<void> {
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { createdAt: "desc" },
-      include: { client: { select: { id: true, name: true, company: true, address: true, notes: true, email: true } } },
+      include: { client: true },
     }),
     prisma.project.count({ where }),
   ]);
@@ -49,17 +49,7 @@ export async function getProject(req: Request, res: Response): Promise<void> {
     project = await prisma.project.findUnique({
       where: { id },
       include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-            contactPerson: true,
-            email: true,
-            phone: true,
-            address: true,
-          },
-        },
+        client: true,
         assets: true,
         credentials: {
           select: { id: true, portalName: true, username: true, notes: true, assetCategory: true, loginUrl: true, minRoleAccess: true, createdAt: true },
@@ -102,7 +92,7 @@ export async function createProject(req: Request, res: Response): Promise<void> 
       managerId: managerId || null,
       workspaceId: req.body.workspaceId || null,
     },
-    include: { client: { select: { id: true, name: true } } },
+    include: { client: true },
   });
 
   await logAudit({
@@ -137,7 +127,7 @@ export async function updateProject(req: Request, res: Response): Promise<void> 
   const updated = await prisma.project.update({
     where: { id },
     data: updateData,
-    include: { client: { select: { id: true, name: true } } },
+    include: { client: true },
   });
 
   await logAudit({

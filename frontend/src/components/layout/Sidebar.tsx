@@ -115,12 +115,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 </div>
                 {count !== undefined && (
                   <span
-                    className={cn(
-                      "text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all shrink-0 ml-2",
-                      count > 0
-                        ? "bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200"
-                        : "bg-gray-100 text-gray-400",
-                    )}
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all shrink-0 ml-2 bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200"
                   >
                     {count}
                   </span>

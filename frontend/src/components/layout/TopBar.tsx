@@ -71,7 +71,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   };
 
   const totalResults = searchResults
-    ? searchResults.clients.length + searchResults.projects.length + searchResults.servers.length + searchResults.domains.length + searchResults.urls.length + searchResults.billing.length
+    ? searchResults.clients.length + searchResults.projects.length + searchResults.servers.length + searchResults.domains.length + searchResults.urls.length
     : 0;
 
   return (
@@ -176,17 +176,6 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                           <span className="font-medium">{u.alias || u.shortCode}</span>
                           <span className="text-gray-500 ml-2">({u.clickCount} clicks)</span>
                         </Link>
-                      ))}
-                    </div>
-                  )}
-                  {searchResults.billing.length > 0 && (
-                    <div>
-                      <p className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase">Billing</p>
-                      {searchResults.billing.map((b) => (
-                        <div key={b.id} className="block px-4 py-2 text-sm hover:bg-gray-50">
-                          <span className="font-medium">{b.billingType}</span>
-                          <span className="text-gray-500 ml-2">({b.project.name})</span>
-                        </div>
                       ))}
                     </div>
                   )}

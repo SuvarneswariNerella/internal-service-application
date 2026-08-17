@@ -14,7 +14,7 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
   
   // If the currentRecord has no items, we can optionally provide a dummy item so the preview isn't entirely blank.
   const items = [
-    { name: "Sample Service / Product", description: "This is a placeholder item for preview purposes.", quantity: 1, rate: 1000, tax: 18 }
+    { name: "Sample Service / Product", description: "This is a placeholder item for preview purposes.", hsn: "998311", quantity: 1, rate: 1000, tax: 18 }
   ];
   
   // Format currency
@@ -30,10 +30,14 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
   const workspaceName = workspace?.displayName || "Workspace Name Not Set";
   
   // Calculate Totals
-  const subtotal = items.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.rate || 0)), 0);
+  const baseTotal = items.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.rate || 0)), 0);
   const taxPercentage = 18;
-  const taxAmount = (subtotal * taxPercentage) / 100;
+  const subtotal = items.reduce((acc: number, item: any) => acc + (((item.quantity || 0) * (item.rate || 0)) * (1 + taxPercentage / 100)), 0);
+  const taxAmount = (baseTotal * taxPercentage) / 100;
   const total = subtotal + taxAmount;
+  
+  // Dummy state for preview
+  const isIntraState = true;
 
   // Formatting dates
   const issueDate = template.createdAt ? new Date(template.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
@@ -96,9 +100,9 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
             </div>
             <div className="md:text-right flex flex-col md:items-end justify-center">
               <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">GST Tax Supply:</p>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-bold">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold ${isIntraState ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Intra-State (CGST+SGST)
+                {isIntraState ? "Intra-State (CGST+SGST)" : "Inter-State (IGST)"}
               </div>
             </div>
           </div>
@@ -110,6 +114,7 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
                 <tr className="bg-gray-50 border-y border-gray-200">
                   <th className="py-3 px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">Item Description</th>
                   <th className="py-3 px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-right">Qty</th>
+                  <th className="py-3 px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-right">HSN/SAC</th>
                   <th className="py-3 px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-right">Rate</th>
                   <th className="py-3 px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-right">GST %</th>
                   <th className="py-3 px-4 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-right">Amount</th>
@@ -117,19 +122,20 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.length > 0 ? items.map((item: any, idx: number) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
                     <td className="py-4 px-4">
-                      <p className="text-xs font-extrabold text-gray-900">{item.name}</p>
+                      <p className="text-xs font-extrabold text-gray-900">{item.name || 'Item Name'}</p>
                       {item.description && <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{item.description}</p>}
                     </td>
                     <td className="py-4 px-4 text-xs font-bold text-gray-900 text-right">{item.quantity}</td>
+                    <td className="py-4 px-4 text-xs font-medium text-gray-600 text-right">{item.hsn || '-'}</td>
                     <td className="py-4 px-4 text-xs font-medium text-gray-600 text-right">{formatCurrency(item.rate)}</td>
-                    <td className="py-4 px-4 text-xs font-medium text-gray-600 text-right">{item.tax || taxPercentage}%</td>
-                    <td className="py-4 px-4 text-xs font-extrabold text-gray-900 text-right">{formatCurrency(item.quantity * item.rate)}</td>
+                    <td className="py-4 px-4 text-xs font-medium text-gray-600 text-right">{taxPercentage}%</td>
+                    <td className="py-4 px-4 text-xs font-extrabold text-gray-900 text-right">{formatCurrency((item.quantity * item.rate) * (1 + taxPercentage / 100))}</td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-xs text-gray-500 italic">No line items specified.</td>
+                    <td colSpan={6} className="py-8 text-center text-xs text-gray-500 italic">No line items specified.</td>
                   </tr>
                 )}
               </tbody>
@@ -152,16 +158,23 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
               </div>
               
               {taxPercentage > 0 && (
-                <>
+                isIntraState ? (
+                  <>
+                    <div className="flex justify-between items-center text-xs text-gray-600 font-medium">
+                      <span>CGST ({(taxPercentage/2).toFixed(1)}%):</span>
+                      <span className="font-extrabold text-gray-900">{formatCurrency(taxAmount / 2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-600 font-medium">
+                      <span>SGST ({(taxPercentage/2).toFixed(1)}%):</span>
+                      <span className="font-extrabold text-gray-900">{formatCurrency(taxAmount / 2)}</span>
+                    </div>
+                  </>
+                ) : (
                   <div className="flex justify-between items-center text-xs text-gray-600 font-medium">
-                    <span>CGST ({(taxPercentage/2).toFixed(1)}%):</span>
-                    <span className="font-extrabold text-gray-900">{formatCurrency(taxAmount / 2)}</span>
+                    <span>IGST ({taxPercentage.toFixed(1)}%):</span>
+                    <span className="font-extrabold text-gray-900">{formatCurrency(taxAmount)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-gray-600 font-medium">
-                    <span>SGST ({(taxPercentage/2).toFixed(1)}%):</span>
-                    <span className="font-extrabold text-gray-900">{formatCurrency(taxAmount / 2)}</span>
-                  </div>
-                </>
+                )
               )}
               
               <div className="mt-2 pt-3 border-t border-gray-200 flex justify-between items-center bg-blue-600 text-white p-3 rounded-lg shadow-sm shadow-blue-500/20">

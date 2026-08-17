@@ -136,7 +136,7 @@ export const generateFinancePdf = async (
                   <td class="py-4 text-center text-sm">${item.qty}</td>
                   <td class="py-4 text-right text-sm">${Number(item.rate).toLocaleString()}</td>
                   <td class="py-4 text-center text-sm">${item.gst || 18}%</td>
-                  <td class="py-4 text-right text-sm font-bold">${(item.qty * item.rate).toLocaleString()}</td>
+                  <td class="py-4 text-right text-sm font-bold">${((item.qty * item.rate) * (1 + (item.gst || 18) / 100)).toLocaleString()}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -175,11 +175,19 @@ export const generateFinancePdf = async (
     `;
   }
 
-  const browser = await puppeteer.launch({ 
+  const browserOptions: any = {
     headless: true,
-    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-  });
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  };
+
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    browserOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  } else if (process.platform === 'win32') {
+    // Keep local windows path as fallback if env var is missing during local dev
+    browserOptions.executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  }
+
+  const browser = await puppeteer.launch(browserOptions);
   const page = await browser.newPage();
   
   await page.setContent(html, { waitUntil: 'networkidle0' });

@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Loader2, Layers, Palette } from "lucide-react";
-import { Workspace } from "@/api/workspaces";
+import { Workspace, workspacesApi } from "@/api/workspaces";
 import { DesignTemplate, templatesApi } from "@/api/templates";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 // @ts-ignore
-import classicRaw from "../../../../Invoice_Templates/Classic.html?raw";
+import classicRaw from "../../Invoice_Templates/Classic.html?raw";
 // @ts-ignore
-import minimalRaw from "../../../../Invoice_Templates/Minimal.html?raw";
+import minimalRaw from "../../Invoice_Templates/Minimal.html?raw";
 // @ts-ignore
-import modernRaw from "../../../../Invoice_Templates/Modern.html?raw";
+import modernRaw from "../../Invoice_Templates/Modern.html?raw";
 
 const rawTemplates: Record<string, string> = {
   classic: minimalRaw,
@@ -64,8 +64,7 @@ export default function DesignTemplateFormModal({ isOpen, onClose, workspace, te
 
   useEffect(() => {
     if (isOpen) {
-      // @ts-ignore
-      import("@/api/workspaces").then(m => m.workspacesApi.list()).then(res => {
+      workspacesApi.list().then(res => {
         if (res && res.data) {
           setWorkspaces(res.data);
           if (!workspace && res.data.length > 0) {

@@ -8,7 +8,7 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
 
   const clientFilter = workspaceId ? { workspaceId } : undefined;
   const projectFilter = workspaceId ? { client: { workspaceId } } : undefined;
-  const financeFilter = workspaceId ? { project: { client: { workspaceId } } } : undefined;
+  const financeFilter = workspaceId ? { workspaceId } : undefined;
 
   const now = new Date();
   const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -82,7 +82,7 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
       },
     }),
     prisma.financeRecord.aggregate({
-      where: { status: "OVERDUE", project: projectFilter ? { client: { workspaceId } } : undefined },
+      where: { status: "OVERDUE", workspaceId: workspaceId ? workspaceId : undefined },
       _sum: { amount: true },
       _count: true,
     }),

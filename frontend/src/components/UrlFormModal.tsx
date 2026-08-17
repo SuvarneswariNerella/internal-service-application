@@ -22,7 +22,6 @@ const CATEGORY_OPTIONS = [
   "Server Access",
   "Documentation",
   "Marketing",
-  "Other",
 ];
 
 const STATUS_OPTIONS = [
@@ -375,6 +374,7 @@ export default function UrlFormModal({
                       {CATEGORY_OPTIONS.map((cat) => (
                         <option key={cat} value={cat} className="text-gray-900">{cat}</option>
                       ))}
+                      <option value="Other" className="text-gray-900">Other</option>
                     </select>
                     <ChevronDown className="w-3.5 h-3.5 text-gray-400 mr-2.5 shrink-0 pointer-events-none" />
                   </>

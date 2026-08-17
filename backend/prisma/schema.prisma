@@ -72,6 +72,9 @@ model Client {
   email         String
   phone         String?
   address       String?
+  state         String?
+  city          String?
+  pincode       String?
   status        ClientStatus @default(ACTIVE)
   notes              String?
   retainer           Float?       @default(0)
@@ -102,7 +105,6 @@ model Project {
   managerId   String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  billing     Billing[]
   assets      Asset?
   credentials Credential[]
   shortUrls   ShortUrl[]
@@ -113,20 +115,6 @@ model Project {
   maintenanceRecords MaintenanceRecord[]
   workspaceId    String?
   workspace      Workspace?    @relation(fields: [workspaceId], references: [id])
-}
-
-model Billing {
-  id            String        @id @default(uuid())
-  projectId     String
-  project       Project       @relation(fields: [projectId], references: [id])
-  billingType   String
-  amount        Decimal       @db.Decimal(10, 2)
-  currency      String        @default("USD")
-  dueDate       DateTime?
-  paymentStatus PaymentStatus @default(PENDING)
-  invoiceNumber String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
 }
 
 model Asset {
@@ -471,4 +459,14 @@ model TicketStatusHistory {
   enteredAt           DateTime @default(now())
   exitedAt            DateTime?
   durationMinutes     Int?
+}
+
+model ItemCode {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String
+  description String?
+  type        String   @default("SAC") // SAC or HSN
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
