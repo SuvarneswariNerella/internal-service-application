@@ -20,6 +20,9 @@ export interface Project {
     email?: string;
     phone?: string;
     address?: string;
+    state?: string;
+    city?: string;
+    pincode?: string;
     notes?: string;
   };
   assets?: Asset;

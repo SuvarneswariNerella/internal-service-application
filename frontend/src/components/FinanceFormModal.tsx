@@ -165,9 +165,8 @@ export default function FinanceFormModal({
   }, [record, isOpen]);
 
   // Calculations
-  const baseTotal = lineItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
+  const subtotal = lineItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
   const totalGst = lineItems.reduce((acc, item) => acc + ((item.qty * item.rate * item.gst) / 100), 0);
-  const subtotal = lineItems.reduce((acc, item) => acc + ((item.qty * item.rate) * (1 + item.gst / 100)), 0);
   const grandTotal = Math.max(0, subtotal - discount + totalGst);
 
   const handleAddLineItem = () => {
