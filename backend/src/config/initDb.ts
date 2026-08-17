@@ -104,22 +104,23 @@ export async function ensureQrCodeTableSchema() {
 
 export async function seedInitialDataIfEmpty() {
   try {
-    // Seed default users if empty
-    const userCount = await prisma.user.count();
-    if (userCount === 0) {
-      console.log("[Seed] Creating default users...");
-      const hashedPassword = await bcrypt.hash("password123", 12);
-      await prisma.user.createMany({
-        data: [
-          { email: "admin@expinova.io", password: hashedPassword, name: "Admin User", role: "ADMIN" as any },
-          { email: "pm@expinova.io", password: hashedPassword, name: "Project Manager", role: "PROJECT_MANAGER" as any },
-          { email: "dev@expinova.io", password: hashedPassword, name: "Developer", role: "DEVELOPER" as any },
-          { email: "accounts@expinova.io", password: hashedPassword, name: "Accounts Team", role: "ACCOUNTS" as any },
-          { email: "ops@expinova.io", password: hashedPassword, name: "Operations Team", role: "OPERATIONS" as any },
-        ]
+    // Ensure default users exist with correct credentials
+    const hashedPassword = await bcrypt.hash("password123", 12);
+    const defaultUsers = [
+      { email: "admin@expinova.io", name: "Admin User", role: "ADMIN" as any },
+      { email: "pm@expinova.io", name: "Project Manager", role: "PROJECT_MANAGER" as any },
+      { email: "dev@expinova.io", name: "Developer", role: "DEVELOPER" as any },
+      { email: "accounts@expinova.io", name: "Accounts Team", role: "ACCOUNTS" as any },
+      { email: "ops@expinova.io", name: "Operations Team", role: "OPERATIONS" as any },
+    ];
+    for (const u of defaultUsers) {
+      await prisma.user.upsert({
+        where: { email: u.email },
+        update: { password: hashedPassword },
+        create: { email: u.email, password: hashedPassword, name: u.name, role: u.role },
       });
-      console.log("[Seed] Default users created.");
     }
+    console.log("[Seed] Default users ensured.");
 
     const pm = await prisma.user.findFirst({ where: { role: "PROJECT_MANAGER" } });
     const pmId = pm ? pm.id : null;
