@@ -29,4 +29,4 @@ EXPOSE 5000
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
-CMD ["npm", "start"]
+CMD npx prisma db push --skip-generate && npm start
