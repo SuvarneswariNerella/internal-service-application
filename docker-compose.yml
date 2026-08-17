@@ -42,6 +42,13 @@ services:
       - "80"
     depends_on:
       - backend
+    networks:
+      - default
+      - dokploy-network
 
 volumes:
   db_data:
+
+networks:
+  dokploy-network:
+    external: true
