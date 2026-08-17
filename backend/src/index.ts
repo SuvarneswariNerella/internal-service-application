@@ -66,8 +66,6 @@ app.use("/api/templates", templateRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/items", itemsRoutes);
 
-app.use(errorHandler);
-
 import { ensureQrCodeTableSchema, seedInitialDataIfEmpty, ensureAssetPlatformsTable, ensureCredentialTableSchema, ensureFinanceRecordTableSchema } from "@/config/initDb";
 
 app.get("/api/seed", async (_req, res) => {
@@ -78,58 +76,30 @@ app.get("/api/seed", async (_req, res) => {
 app.get("/api/debug-data", async (_req, res) => {
   try {
     const prisma = (await import("@/config/db")).default;
-    const clients = await prisma.client.findMany();
-
-    for (const c of clients) {
-      const existing = await prisma.project.findMany({ where: { clientId: c.id } });
-      if (existing.length === 0) {
-        await prisma.project.create({
-          data: {
-            name: `${c.name} Main Portal`,
-            description: `Primary application for ${c.name}`,
-            technology: "React, Node.js",
-            startDate: new Date(),
-            status: "IN_PROGRESS",
-            clientId: c.id,
-          },
-        });
-        await prisma.project.create({
-          data: {
-            name: `${c.name} Cloud Platform`,
-            description: `Cloud services for ${c.name}`,
-            technology: "TypeScript, AWS",
-            startDate: new Date(),
-            status: "PLANNING",
-            clientId: c.id,
-          },
-        });
-      }
-    }
-
+    const allUsers = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true } });
     const allClients = await prisma.client.findMany();
     const allProjects = await prisma.project.findMany({ include: { client: { select: { id: true, name: true } } } });
     const allWorkspaces = await prisma.workspace.findMany();
 
     res.json({
+      users: allUsers,
       clientsCount: allClients.length,
       projectsCount: allProjects.length,
       workspacesCount: allWorkspaces.length,
-      workspaces: allWorkspaces.map(w => ({ id: w.id, displayName: w.displayName })),
-      clients: allClients.map((c) => ({ id: c.id, name: c.name })),
-      projects: allProjects.map((p) => ({ id: p.id, name: p.name, clientId: p.clientId, clientName: p.client?.name })),
     });
   } catch (error) {
     res.status(500).send(String(error));
   }
 });
 
-ensureQrCodeTableSchema().then(() => {
-  seedInitialDataIfEmpty();
-});
+app.use(errorHandler);
 
-ensureAssetPlatformsTable();
-ensureCredentialTableSchema();
-ensureFinanceRecordTableSchema();
+// Run initial seeding & table setups on startup
+seedInitialDataIfEmpty().catch(console.error);
+ensureQrCodeTableSchema().catch(console.error);
+ensureAssetPlatformsTable().catch(console.error);
+ensureCredentialTableSchema().catch(console.error);
+ensureFinanceRecordTableSchema().catch(console.error);
 
 startCronJobs();
 
