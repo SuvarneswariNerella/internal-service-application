@@ -314,9 +314,9 @@ export default function ClientFormModal({
         }
       }
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        `Failed to ${isEdit ? "update" : "create"} client`;
+      const errRes = (err as { response?: { data?: { error?: string; details?: Array<{ path?: string; message?: string }> } } })?.response?.data;
+      const detailsMsg = errRes?.details?.map(d => `${d.path ? d.path + ': ' : ''}${d.message}`).join(", ");
+      const message = detailsMsg || errRes?.error || `Failed to ${isEdit ? "update" : "create"} client`;
       setError(message);
     } finally {
       setIsSaving(false);
