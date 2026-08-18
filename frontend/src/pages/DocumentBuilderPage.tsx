@@ -117,23 +117,28 @@ export default function DocumentBuilderPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const { globalWorkspaceId, workspaces } = useWorkspaceStore();
+  const { globalWorkspaceId, workspaces, fetchWorkspaces } = useWorkspaceStore();
+  const activeWorkspace = workspaces.find(w => w.id === globalWorkspaceId) || (workspaces.length > 0 ? workspaces[0] : null);
 
-  // Auto-fill workspace data
   useEffect(() => {
-    if (globalWorkspaceId && workspaces.length > 0) {
-      const activeWorkspace = workspaces.find(w => w.id === globalWorkspaceId);
-      if (activeWorkspace) {
-        if (activeWorkspace.logoUrl) {
-          setValue("logoBase64", activeWorkspace.logoUrl);
-        }
-        
-        if (activeWorkspace.displayName) {
-          setValue("companyName", activeWorkspace.displayName);
-        }
-        if (activeWorkspace.contactEmail) {
-          setValue("companyEmail", activeWorkspace.contactEmail);
-        }
+    fetchWorkspaces();
+  }, [fetchWorkspaces]);
+
+  // Auto-fill workspace data & logo
+  useEffect(() => {
+    if (workspaces.length > 0 && activeWorkspace) {
+      // Auto-connect workspace logo if available
+      const wsLogo = activeWorkspace.logoUrl || "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=120&h=120&fit=crop";
+      if (!formData.logoBase64 || formData.logoBase64.includes("placehold.co")) {
+        setValue("logoBase64", wsLogo);
+      }
+      
+      if (activeWorkspace.displayName) {
+        setValue("companyName", activeWorkspace.displayName);
+      }
+      if (activeWorkspace.contactEmail) {
+        setValue("companyEmail", activeWorkspace.contactEmail);
+      }
         
         const addressParts = [
           activeWorkspace.address,
@@ -306,6 +311,11 @@ export default function DocumentBuilderPage() {
     rawHtml = rawHtml.replace(/#007aff/gi, formData.primaryColor); // Classic/Minimal primary
     rawHtml = rawHtml.replace(/#003b8e/gi, formData.primaryColor); // Modern primary
     rawHtml = rawHtml.replace(/#0056b3/gi, formData.primaryColor); // Modern gradient secondary
+
+    // Replace placeholder logo with actual logo
+    if (formData.logoBase64) {
+      rawHtml = rawHtml.replace(/https:\/\/placehold\.co\/200x50\/000000\/FFFFFF\/png\?text=LOGO/g, formData.logoBase64);
+    }
      
     const iframeDoc = iframeRef.current.contentDocument;
     if (iframeDoc) {
@@ -333,11 +343,9 @@ export default function DocumentBuilderPage() {
     }
 
     // Logo
-    if (formData.logoBase64) {
-      const logoImg = doc.querySelector('.tm_logo img') as HTMLImageElement | null;
-      if (logoImg) {
-        logoImg.src = formData.logoBase64;
-      }
+    const logoImg = doc.querySelector('.tm_logo img, .company-logo img, img[alt="Logo"]') as HTMLImageElement | null;
+    if (logoImg && formData.logoBase64) {
+      logoImg.src = formData.logoBase64;
     }
 
     // Invoice Details
@@ -677,7 +685,7 @@ export default function DocumentBuilderPage() {
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Company Logo</label>
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-16 h-16 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
                     {formData.logoBase64 ? (
                       <img src={formData.logoBase64} alt="Logo preview" className="w-full h-full object-contain p-1" />
                     ) : (
@@ -685,11 +693,23 @@ export default function DocumentBuilderPage() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-[#5438FF] hover:text-[#5438FF] rounded-lg text-sm font-medium transition-colors">
-                      <Upload className="w-4 h-4" /> Upload Logo
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                    </label>
-                    <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 2MB</p>
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 hover:border-[#5438FF] hover:text-[#5438FF] rounded-lg text-xs font-bold transition-colors shadow-sm">
+                        <Upload className="w-3.5 h-3.5" /> {formData.logoBase64 ? "Change Photo / Logo" : "Upload Logo"}
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                      </label>
+                      {activeWorkspace?.logoUrl && formData.logoBase64 !== activeWorkspace.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setValue("logoBase64", activeWorkspace.logoUrl)}
+                          className="px-2.5 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                          title="Reset to current workspace logo"
+                        >
+                          Reset to Workspace
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1.5">PNG, JPG up to 2MB (Auto-connected from {activeWorkspace?.displayName || "current workspace"})</p>
                   </div>
                 </div>
               </div>

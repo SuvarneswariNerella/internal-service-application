@@ -22,10 +22,11 @@ export const generateFinancePdf = async (
   const date = record.createdAt ? new Date(record.createdAt).toISOString().split('T')[0] : "-";
   const dueDate = record.dueDate ? new Date(record.dueDate).toISOString().split('T')[0] : "-";
 
+  const effectiveLogo = metadata?.logoBase64 || metadata?.logoUrl || workspace?.logoUrl;
   const previewData: Record<string, string> = {
     "company.name": workspace?.legalName || workspace?.displayName || "Company Name",
-    "company.logo": workspace?.logoUrl 
-      ? `<img src="${workspace.logoUrl}" style="max-height: 40px; object-fit: contain;" />` 
+    "company.logo": effectiveLogo 
+      ? `<img src="${effectiveLogo}" style="max-height: 40px; object-fit: contain;" />` 
       : `<div style="width:60px;height:40px;background:#1e293b;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">LOGO</div>`,
     "company.address": workspace?.address || "Company Address",
     "company.gstin": workspace?.gstin || "N/A",
