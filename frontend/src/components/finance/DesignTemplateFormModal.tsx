@@ -10,11 +10,14 @@ import classicRaw from "../../Invoice_Templates/Classic.html?raw";
 import minimalRaw from "../../Invoice_Templates/Minimal.html?raw";
 // @ts-ignore
 import modernRaw from "../../Invoice_Templates/Modern.html?raw";
+// @ts-ignore
+import executiveRaw from "../../Invoice_Templates/Executive.html?raw";
 
 const rawTemplates: Record<string, string> = {
-  classic: minimalRaw,
-  minimal: classicRaw,
+  classic: classicRaw,
+  minimal: minimalRaw,
   modern: modernRaw,
+  executive: executiveRaw,
 };
 
 interface Props {
@@ -131,9 +134,11 @@ export default function DesignTemplateFormModal({ isOpen, onClose, workspace, te
                                  .replace(/Bill To:/g, "Purchase Order To:");
     }
 
-    // For modern template, replace the hardcoded blue gradients/colors
+    // For modern and executive template, replace the hardcoded brand colors
     if (design.toLowerCase() === 'modern') {
       htmlToRender = htmlToRender.replace(/#003b8e/gi, brandColor).replace(/#0056b3/gi, brandColor);
+    } else if (design.toLowerCase() === 'executive') {
+      htmlToRender = htmlToRender.replace(/#4A2E2B/gi, brandColor).replace(/#4a2e2b/gi, brandColor);
     }
 
     const dynamicStyles = `
@@ -206,6 +211,8 @@ export default function DesignTemplateFormModal({ isOpen, onClose, workspace, te
   
       if (design.toLowerCase() === 'modern') {
         customHtml = customHtml.replace(/#003b8e/gi, brandColor).replace(/#0056b3/gi, brandColor);
+      } else if (design.toLowerCase() === 'executive') {
+        customHtml = customHtml.replace(/#4A2E2B/gi, brandColor).replace(/#4a2e2b/gi, brandColor);
       }
 
       customHtml = customHtml.replace('</head>', `<meta name="template-config" content="${configString}" />\n</head>`);
@@ -347,8 +354,8 @@ export default function DesignTemplateFormModal({ isOpen, onClose, workspace, te
 
                   <div>
                     <label className="block text-[11px] font-extrabold text-gray-900 mb-2">Base PDF / Screen Design Style</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {["CLASSIC", "MINIMAL", "MODERN"].map((tplKey) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {["CLASSIC", "MINIMAL", "MODERN", "EXECUTIVE"].map((tplKey) => (
                         <button
                           key={tplKey}
                           type="button"

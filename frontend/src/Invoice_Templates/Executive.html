@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Executive Invoice</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #4A2E2B;
+      --accent-gold: #C89D4B;
+      --light-gold: #E5C378;
+      --text-dark: #2B1810;
+      --text-muted: #6B5E59;
+    }
+    body, html {
+      color: #333;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.5em;
+      background-color: #f5f6fa;
+      margin: 0;
+      padding: 0;
+    }
+    .tm_container {
+      max-width: 880px;
+      padding: 30px 15px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+    .tm_invoice_wrap {
+      position: relative;
+    }
+    .tm_invoice {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    
+    /* Header Banner */
+    .executive-header {
+      background-color: var(--primary-color, #4A2E2B);
+      padding: 40px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ffffff;
+    }
+    .executive-header .header-left {
+      flex: 1;
+    }
+    .executive-header h1, .executive-title {
+      margin: 0;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+    .executive-number {
+      margin-top: 6px;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent-gold, #C89D4B);
+      letter-spacing: 1px;
+    }
+    .executive-header .header-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+    }
+    .company-logo img {
+      max-height: 50px;
+      max-width: 180px;
+      object-fit: contain;
+    }
+    .executive-brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+    }
+    .executive-brand-mark svg {
+      width: 32px;
+      height: 32px;
+      fill: var(--accent-gold, #C89D4B);
+    }
+    
+    /* Body */
+    .executive-body {
+      padding: 36px 48px 40px;
+    }
+    
+    /* 3-Column Info Grid */
+    .executive-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 24px;
+    }
+    .info-col h3, .info-col h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-dark, #2B1810);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .info-col p {
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text-muted, #6B5E59);
+    }
+    
+    /* Gold Accent Divider */
+    .executive-gold-divider {
+      height: 2px;
+      background-color: var(--accent-gold, #C89D4B);
+      width: 100%;
+      margin: 16px 0 20px;
+    }
+    
+    /* Table */
+    .executive-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+    .executive-table th {
+      text-align: left;
+      padding: 12px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-dark, #2B1810);
+      letter-spacing: 1px;
+      border: none;
+    }
+    .executive-table td {
+      padding: 14px 10px;
+      font-size: 13px;
+      color: #333;
+      border: none;
+      border-bottom: 1px solid #f2ece9;
+    }
+    .executive-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Totals & Payment Section */
+    .executive-bottom-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    .payment-section {
+      width: 48%;
+    }
+    .payment-section h4 {
+      margin: 0 0 6px 0;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-dark, #2B1810);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .payment-section p {
+      margin: 0 0 16px 0;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text-muted, #6B5E59);
+    }
+    
+    .totals-section {
+      width: 42%;
+    }
+    .totals-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .totals-table td {
+      padding: 6px 0;
+      font-size: 13px;
+      border: none;
+    }
+    .totals-table .totals-label {
+      color: var(--text-dark, #2B1810);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 12px;
+    }
+    .totals-table .totals-val {
+      text-align: right;
+      font-weight: 600;
+      color: var(--text-dark, #2B1810);
+    }
+    .totals-table .grand-total-row td {
+      padding-top: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--primary-color, #4A2E2B);
+    }
+    
+    /* Footer Banner */
+    .executive-footer {
+      background-color: var(--primary-color, #4A2E2B);
+      padding: 32px 48px 24px;
+      color: #ffffff;
+    }
+    .terms-block h4 {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent-gold, #C89D4B);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .terms-block p {
+      margin: 0 0 24px 0;
+      font-size: 11.5px;
+      line-height: 1.6;
+      color: #dfd5d3;
+    }
+    
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(200, 157, 75, 0.25);
+    }
+    .footer-bar .website {
+      color: var(--accent-gold, #C89D4B);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-decoration: none;
+    }
+    .footer-socials {
+      display: flex;
+      gap: 12px;
+    }
+    .social-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--accent-gold, #C89D4B);
+      color: var(--primary-color, #4A2E2B);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    
+    @media print {
+      .tm_hide_print { display: none !important; }
+      body, html { background-color: #fff !important; }
+      .tm_container { max-width: 100% !important; padding: 0 !important; }
+      .tm_invoice { box-shadow: none !important; border-radius: 0 !important; }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tm_container">
+    <div class="tm_invoice_wrap">
+      <div class="tm_invoice" id="tm_download_section">
+        
+        <!-- Header Banner -->
+        <div class="executive-header">
+          <div class="header-left">
+            <h1 class="executive-title">INVOICE</h1>
+            <div class="executive-number">N° <span class="dyn-inv-no">#LL93784</span></div>
+          </div>
+          <div class="header-right">
+            <div class="company-logo">
+              <img src="https://placehold.co/200x50/000000/FFFFFF/png?text=LOGO" alt="Logo">
+            </div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="executive-body">
+          
+          <!-- 3-Column Info Grid -->
+          <div class="executive-info-grid">
+            <div class="info-col">
+              <h4><b>Pay To:</b></h4>
+              <p>
+                Laralink Ltd<br>
+                86-90 Paul Street, London<br>
+                England EC2A 4NE<br>
+                demo@gmail.com
+              </p>
+            </div>
+            
+            <div class="info-col">
+              <h4><b>Bill To:</b></h4>
+              <p>
+                Lowell H. Dominguez<br>
+                84 Spilman Street, London<br>
+                United Kingdom<br>
+                lowell@gmail.com
+              </p>
+            </div>
+            
+            <div class="info-col">
+              <h4><b>Date:</b></h4>
+              <p>
+                <span class="dyn-date">01.07.2022</span><br>
+                <b>Due Date:</b> <span class="dyn-due-date">30.07.2022</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Gold Accent Divider -->
+          <div class="executive-gold-divider"></div>
+
+          <!-- Items Table -->
+          <table class="executive-table tm_table modern-table">
+            <thead>
+              <tr>
+                <th style="width: 28%; text-align: left;">DESCRIPTION</th>
+                <th style="width: 24%; text-align: left;">DETAILS</th>
+                <th style="width: 12%; text-align: center;">HSN/SAC</th>
+                <th style="width: 12%; text-align: center;">PRICE</th>
+                <th style="width: 8%; text-align: center;">QTY</th>
+                <th style="width: 8%; text-align: center;">GST %</th>
+                <th style="width: 16%; text-align: right;">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1. Website Design</td>
+                <td>Six web page designs and three times revision</td>
+                <td style="text-align: center;">998311</td>
+                <td style="text-align: center;">$350</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: right;">$350</td>
+              </tr>
+              <tr>
+                <td>2. Web Development</td>
+                <td>Convert pixel-perfect frontend and make it dynamic</td>
+                <td style="text-align: center;">998311</td>
+                <td style="text-align: center;">$600</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: right;">$600</td>
+              </tr>
+              <tr>
+                <td>3. App Development</td>
+                <td>Android &amp; iOS Application Development</td>
+                <td style="text-align: center;">998311</td>
+                <td style="text-align: center;">$200</td>
+                <td style="text-align: center;">2</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: right;">$400</td>
+              </tr>
+              <tr>
+                <td>4. Digital Marketing</td>
+                <td>Facebook, Youtube and Google Marketing</td>
+                <td style="text-align: center;">998311</td>
+                <td style="text-align: center;">$100</td>
+                <td style="text-align: center;">3</td>
+                <td style="text-align: center;">18%</td>
+                <td style="text-align: right;">$300</td>
+              </tr>
+              <tr class="modern-subtotal-row">
+                <td colspan="4" style="border: none;"></td>
+                <td colspan="2" style="padding: 10px 0; text-align: left;"><b>Sub Total:</b></td>
+                <td style="padding: 10px 0; text-align: right;"><b>$1650</b></td>
+              </tr>
+              <tr>
+                <td colspan="4" style="border: none;"></td>
+                <td colspan="2" style="padding: 6px 0; text-align: left; color: #555;"><b>Total GST:</b></td>
+                <td style="padding: 6px 0; text-align: right; color: #555;"><b>$82</b></td>
+              </tr>
+              <tr class="modern-subtotal-row">
+                <td colspan="4" style="border: none;"></td>
+                <td colspan="2" style="padding: 10px 0; text-align: left; font-size: 15px; color: var(--primary-color, #4A2E2B);"><b>Grand Total:</b></td>
+                <td style="padding: 10px 0; text-align: right; font-size: 15px; color: var(--primary-color, #4A2E2B);"><b>$1732</b></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Gold Accent Divider -->
+          <div class="executive-gold-divider"></div>
+
+          <!-- Bottom Section: Payment Method & Info -->
+          <div class="executive-bottom-row">
+            <div class="payment-section">
+              <h4><b>Payment Method:</b> Paypal, Western Union</h4>
+              <p>
+                <b>Account:</b> 000 000 000<br>
+                <b>A/C Name:</b> Elijah Rodriguez<br>
+                <b>Details:</b> Add your details
+              </p>
+              
+              <h4><b>Payment Info:</b></h4>
+              <p>Credit Card - 236***********928<br>Amount: $1732</p>
+            </div>
+            
+            <div class="totals-section">
+              <!-- Signature or Authorized Stamp -->
+              <div style="text-align: right; margin-top: 10px;">
+                <img src="https://placehold.co/200x80/ffffff/000000/png?text=Signature&font=playfair-display" alt="Signature" style="max-height: 70px; margin-bottom: 8px;">
+                <div style="border-top: 1px dashed #ccc; width: 180px; margin-left: auto; margin-bottom: 6px;"></div>
+                <p style="margin: 0; font-weight: 700; color: var(--primary-color, #4A2E2B); font-size: 13px;">Jhon Donate</p>
+                <p style="margin: 0; color: #777; font-size: 11.5px;">Accounts Manager</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer Banner -->
+        <div class="executive-footer">
+          <div class="terms-block">
+            <h4><b>Terms &amp; Conditions:</b></h4>
+            <p>All claims relating to quantity or shipping errors shall be waived by Buyer unless made in writing to Seller within thirty (30) days after delivery of goods to the address stated.</p>
+          </div>
+          
+          <div class="footer-bar">
+            <a href="https://website.com" class="website" target="_blank">WWW.WEBSITE.COM</a>
+            <div class="footer-socials">
+              <span class="social-icon">f</span>
+              <span class="social-icon">in</span>
+              <span class="social-icon">𝕏</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>

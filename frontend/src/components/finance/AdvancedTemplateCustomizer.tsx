@@ -352,6 +352,105 @@ const TEMPLATES: Record<string, { html: string, css: string }> = {
 .row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
 .grand-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; border-top: 1px solid #111; padding-top: 16px; margin-top: 8px; }
 `
+  },
+  EXECUTIVE: {
+    html: `
+<div class="invoice-box executive-theme">
+  <div class="executive-header">
+    <div class="header-left">
+      <h1 class="doc-type">{{doc.type}}</h1>
+      <p class="doc-number">N° {{doc.number}}</p>
+    </div>
+    <div class="header-right">
+      {{company.logo}}
+    </div>
+  </div>
+  
+  <div class="executive-body">
+    <div class="contact-grid">
+      <div>
+        <p class="label">Pay To</p>
+        <p class="company-name"><strong>{{company.name}}</strong></p>
+        <p>{{company.address}}</p>
+        <p>GSTIN: {{company.gstin}} | {{company.email}}</p>
+      </div>
+      <div>
+        <p class="label">Bill To</p>
+        <p class="client-name"><strong>{{client.name}}</strong></p>
+        <p>{{client.address}}</p>
+        <p>GSTIN: {{client.gstin}}</p>
+      </div>
+      <div class="dates">
+        <p class="label">Date</p>
+        <p>{{doc.issuedDate}}</p>
+        <p class="label" style="margin-top: 14px;">Due Date</p>
+        <p>{{doc.dueDate}}</p>
+      </div>
+    </div>
+    
+    <div class="gold-divider"></div>
+    
+    <table class="items">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th style="text-align: center;">Qty</th>
+          <th style="text-align: right;">Price</th>
+          <th style="text-align: center;">GST %</th>
+          <th style="text-align: right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{lineItems.html}}
+      </tbody>
+    </table>
+    
+    <div class="gold-divider"></div>
+    
+    <div class="totals-container">
+      <div class="totals">
+        <div class="row"><span>Subtotal:</span> <strong>{{financial.subtotal}}</strong></div>
+        <div class="row"><span>Total GST:</span> <strong>{{financial.tax}}</strong></div>
+        <div class="grand-total"><span>Total:</span> <span>{{financial.total}}</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="executive-footer">
+    <div class="terms">
+      <p class="terms-title">Terms & Conditions</p>
+      <p class="terms-text">All claims relating to quantity or errors shall be made within thirty (30) days after delivery.</p>
+    </div>
+  </div>
+</div>
+`,
+    css: `
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+.invoice-box.executive-theme {
+  padding: 0; background: #ffffff; color: #2B1810;
+  font-family: 'Plus Jakarta Sans', sans-serif; border-radius: 8px; overflow: hidden;
+}
+.executive-header {
+  background: #4A2E2B; padding: 36px 40px; display: flex; justify-content: space-between; align-items: center; color: #fff;
+}
+.executive-header .doc-type { font-size: 36px; font-weight: 800; text-transform: uppercase; margin: 0; letter-spacing: 2px; }
+.executive-header .doc-number { font-size: 18px; font-weight: 600; color: #C89D4B; margin: 6px 0 0; }
+.executive-body { padding: 36px 40px; }
+.contact-grid { display: grid; grid-template-columns: 1.2fr 1.2fr 0.8fr; gap: 30px; margin-bottom: 24px; font-size: 13px; line-height: 1.6; }
+.contact-grid p { margin: 0; color: #6B5E59; }
+.contact-grid .label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #2B1810; margin-bottom: 6px; }
+.gold-divider { height: 2px; background: #C89D4B; margin: 20px 0; }
+.items { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.items th { text-align: left; padding: 12px 10px; font-size: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; color: #2B1810; }
+.items td { padding: 14px 10px; border-bottom: 1px solid #f2ece9; font-size: 13px; }
+.totals-container { display: flex; justify-content: flex-end; margin-top: 10px; }
+.totals { width: 280px; }
+.row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #2B1810; }
+.grand-total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 800; color: #4A2E2B; padding-top: 8px; }
+.executive-footer { background: #4A2E2B; padding: 24px 40px; color: #fff; }
+.terms-title { font-size: 11px; font-weight: 800; color: #C89D4B; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; }
+.terms-text { font-size: 11px; color: #dfd5d3; margin: 0; line-height: 1.5; }
+`
   }
 };
 

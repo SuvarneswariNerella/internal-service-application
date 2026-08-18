@@ -16,11 +16,14 @@ import classicTemplate from "../Invoice_Templates/Classic.html?raw";
 import minimalTemplate from "../Invoice_Templates/Minimal.html?raw";
 // @ts-ignore
 import modernTemplate from "../Invoice_Templates/Modern.html?raw";
+// @ts-ignore
+import executiveTemplate from "../Invoice_Templates/Executive.html?raw";
 
 const templates: Record<string, string> = {
   classic: classicTemplate,
   minimal: minimalTemplate,
   modern: modernTemplate,
+  executive: executiveTemplate,
 };
 
 interface Item {
@@ -310,6 +313,8 @@ export default function DocumentBuilderPage() {
     rawHtml = rawHtml.replace(/#007aff/gi, formData.primaryColor); // Classic/Minimal primary
     rawHtml = rawHtml.replace(/#003b8e/gi, formData.primaryColor); // Modern primary
     rawHtml = rawHtml.replace(/#0056b3/gi, formData.primaryColor); // Modern gradient secondary
+    rawHtml = rawHtml.replace(/#4A2E2B/gi, formData.primaryColor); // Executive primary
+    rawHtml = rawHtml.replace(/#4a2e2b/gi, formData.primaryColor); // Executive primary lowercase
 
     // Replace placeholder logo with actual logo
     if (formData.logoBase64) {
@@ -336,7 +341,7 @@ export default function DocumentBuilderPage() {
     if (!doc) return;
 
     // Title / Type
-    const titleEl = doc.querySelector('.tm_invoice_right .tm_f50, .modern-header h1');
+    const titleEl = doc.querySelector('.tm_invoice_right .tm_f50, .modern-header h1, .executive-header h1, .executive-title');
     if (titleEl) {
       titleEl.textContent = docTitle;
     }
@@ -435,6 +440,16 @@ export default function DocumentBuilderPage() {
             <td style="text-align: center;">${item.qty}</td>
             <td style="text-align: center;">${item.gst || 0}%</td>
             <td style="text-align: center;">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
+          `;
+        } else if (activeDesign === "executive") {
+          tr.innerHTML = `
+            <td style="font-weight: 700; color: #2B1810; padding: 12px 10px;">${index + 1}. ${item.name}</td>
+            <td style="color: #6B5E59; padding: 12px 10px;">${item.description}</td>
+            <td style="text-align: center; color: #6B5E59; padding: 12px 10px;">${item.hsn || ''}</td>
+            <td style="text-align: center; font-weight: 600; padding: 12px 10px;">₹${Number(item.price).toFixed(2)}</td>
+            <td style="text-align: center; padding: 12px 10px;">${item.qty}</td>
+            <td style="text-align: center; padding: 12px 10px;">${item.gst || 0}%</td>
+            <td style="text-align: right; font-weight: 700; color: #2B1810; padding: 12px 10px;">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
           `;
         } else {
           tr.innerHTML = `
@@ -663,8 +678,8 @@ export default function DocumentBuilderPage() {
               </button>
             )}
 
-            <div className="grid grid-cols-3 gap-3">
-              {["classic", "minimal", "modern"].map((t) => (
+            <div className="grid grid-cols-4 gap-3">
+              {["classic", "minimal", "modern", "executive"].map((t) => (
                 <button
                   key={t}
                   type="button"
