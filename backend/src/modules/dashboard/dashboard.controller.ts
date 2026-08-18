@@ -32,7 +32,13 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
     domainsExpiring90,
     pendingBilling,
     topUrls,
-    recentActivity,
+    rawNotifications,
+    rawFinanceRecords,
+    rawEmailLogs,
+    rawClients,
+    rawProjects,
+    rawServers,
+    rawDomains,
     projectsByStatus,
     totalFinanceRecords,
     totalMaintenanceRecords,
@@ -94,8 +100,46 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
     }),
     prisma.notification.findMany({
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 5,
       select: { id: true, type: true, title: true, message: true, isRead: true, createdAt: true },
+    }),
+    prisma.financeRecord.findMany({
+      where: financeFilter,
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: {
+        client: { select: { name: true } },
+        project: { select: { name: true } },
+      },
+    }),
+    prisma.emailLog.findMany({
+      where: workspaceId ? { workspaceId } : undefined,
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    }),
+    prisma.client.findMany({
+      where: clientFilter,
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, name: true, email: true, contactPerson: true, createdAt: true },
+    }),
+    prisma.project.findMany({
+      where: projectFilter,
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { client: { select: { name: true } } },
+    }),
+    prisma.server.findMany({
+      where: { client: clientFilter },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      include: { client: { select: { name: true } } },
+    }),
+    prisma.domain.findMany({
+      where: { client: clientFilter },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      include: { client: { select: { name: true } } },
     }),
     prisma.project.groupBy({
       by: ["status"],
@@ -105,6 +149,92 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
     prisma.financeRecord.count({ where: financeFilter }),
     prisma.maintenanceRecord.count({ where: clientFilter }),
   ]);
+
+  // Aggregate unified system activities
+  const activities: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    createdAt: Date;
+  }> = [];
+
+  for (const f of rawFinanceRecords) {
+    const docType = f.type === "INVOICE" ? "Invoice" : f.type === "QUOTATION" ? "Estimate" : "Purchase Order";
+    const clientStr = f.client?.name || f.project?.name ? ` for ${f.client?.name || f.project?.name}` : "";
+    activities.push({
+      id: `finance-${f.id}`,
+      type: f.type,
+      title: `${docType} #${f.title || f.id.slice(0, 8)}`,
+      message: `${docType}${clientStr} • ₹${Number(f.amount || 0).toLocaleString()} (${f.status})`,
+      createdAt: f.createdAt,
+    });
+  }
+
+  for (const e of rawEmailLogs) {
+    activities.push({
+      id: `email-${e.id}`,
+      type: "EMAIL",
+      title: `Email: ${e.subject}`,
+      message: `Delivered to ${e.recipient}`,
+      createdAt: e.createdAt,
+    });
+  }
+
+  for (const c of rawClients) {
+    activities.push({
+      id: `client-${c.id}`,
+      type: "CLIENT",
+      title: `New Client: ${c.name}`,
+      message: `Client profile created • ${c.email || c.contactPerson || "Active"}`,
+      createdAt: c.createdAt,
+    });
+  }
+
+  for (const p of rawProjects) {
+    activities.push({
+      id: `project-${p.id}`,
+      type: "PROJECT",
+      title: `Project: ${p.name}`,
+      message: `Status: ${p.status.replace(/_/g, ' ')} • Client: ${p.client?.name || 'Internal'}`,
+      createdAt: p.createdAt,
+    });
+  }
+
+  for (const s of rawServers) {
+    activities.push({
+      id: `server-${s.id}`,
+      type: "SERVER",
+      title: `Server: ${s.name}`,
+      message: `Server registered${s.client?.name ? ` for ${s.client.name}` : ''}`,
+      createdAt: s.createdAt,
+    });
+  }
+
+  for (const d of rawDomains) {
+    activities.push({
+      id: `domain-${d.id}`,
+      type: "DOMAIN",
+      title: `Domain: ${d.domain}`,
+      message: `Domain tracked${d.client?.name ? ` for ${d.client.name}` : ''}`,
+      createdAt: d.createdAt,
+    });
+  }
+
+  for (const n of rawNotifications) {
+    activities.push({
+      id: `notif-${n.id}`,
+      type: n.type || "NOTIFICATION",
+      title: n.title,
+      message: n.message,
+      createdAt: n.createdAt,
+    });
+  }
+
+  // Sort unified activities by createdAt descending and take the 10 most recent
+  const recentActivity = activities
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
 
   res.json({
     success: true,
