@@ -12,15 +12,49 @@ export interface EmailOptions {
   }[];
 }
 
+const parseSmtpPort = (portSetting: string | number | undefined): { port: number; secure: boolean } => {
+  const rawPort = String(portSetting || "587");
+  const portMatch = rawPort.match(/\d+/);
+  const port = portMatch ? parseInt(portMatch[0], 10) : 587;
+  const secure = port === 465;
+  return { port, secure };
+};
+
+export const testSmtpConnection = async (settings: any) => {
+  if (!settings?.smtpHost || !settings?.smtpUsername || !settings?.smtpPassword) {
+    throw new Error("SMTP Host, Username, and Password are required to test connection.");
+  }
+
+  const { port, secure } = parseSmtpPort(settings.smtpPort);
+
+  const transporter = nodemailer.createTransport({
+    host: settings.smtpHost,
+    port,
+    secure,
+    auth: {
+      user: settings.smtpUsername,
+      pass: settings.smtpPassword,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
+
+  await transporter.verify();
+  return { success: true, message: `Successfully connected and authenticated with ${settings.smtpHost}:${port}` };
+};
+
 export const sendEmail = async (options: EmailOptions, settings: any) => {
   if (!settings?.smtpHost || !settings?.smtpUsername || !settings?.smtpPassword) {
     throw new Error("SMTP settings are not fully configured in System Settings.");
   }
 
+  const { port, secure } = parseSmtpPort(settings.smtpPort);
+
   const transporter = nodemailer.createTransport({
     host: settings.smtpHost,
-    port: parseInt(settings.smtpPort || '587', 10),
-    secure: settings.smtpPort === '465', // true for 465, false for other ports
+    port,
+    secure,
     auth: {
       user: settings.smtpUsername,
       pass: settings.smtpPassword,

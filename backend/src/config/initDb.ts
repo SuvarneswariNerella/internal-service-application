@@ -104,6 +104,17 @@ export async function ensureQrCodeTableSchema() {
 
 export async function seedInitialDataIfEmpty() {
   try {
+    // Auto-sync database schema if running against fresh or unsynced database
+    try {
+      execSync("npx prisma db push --skip-generate --accept-data-loss", {
+        cwd: path.join(process.cwd()),
+        stdio: "ignore",
+      });
+      console.log("[DB] Prisma schema synchronized with database.");
+    } catch {
+      // Ignore if db push command fails or is not supported in env
+    }
+
     // Ensure default users exist with correct credentials
     const hashedPassword = await bcrypt.hash("password123", 12);
     const defaultUsers = [

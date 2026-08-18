@@ -17,6 +17,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -81,6 +82,35 @@ export default function LoginPage() {
               Sign in
             </Button>
           </form>
+
+          {/* Quick Demo Credentials */}
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Default Demo Accounts</span>
+              <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">password: password123</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { label: "Admin", email: "admin@expinova.io" },
+                { label: "Project Mgr", email: "pm@expinova.io" },
+                { label: "Developer", email: "dev@expinova.io" },
+                { label: "Accounts", email: "accounts@expinova.io" },
+              ].map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => {
+                    setValue("email", acc.email);
+                    setValue("password", "password123");
+                  }}
+                  className="px-2.5 py-1.5 text-xs text-left font-medium text-gray-700 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-gray-200 rounded-lg transition-colors flex items-center justify-between"
+                >
+                  <span>{acc.label}</span>
+                  <span className="text-[10px] text-gray-400 font-mono">Fill</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

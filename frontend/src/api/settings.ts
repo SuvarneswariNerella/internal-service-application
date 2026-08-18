@@ -19,4 +19,5 @@ export interface SystemSettings {
 export const settingsApi = {
   getGeneralSettings: () => api.get<SystemSettings>('/settings/general'),
   updateGeneralSettings: (data: SystemSettings) => api.put<SystemSettings>('/settings/general', data),
+  testSmtpConnection: (data?: Partial<SystemSettings>) => api.post<{ success: boolean; message: string }>('/settings/general/test-smtp', data || {}),
 };

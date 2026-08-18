@@ -1,4 +1,4 @@
-import { Building2, Mail, Key, Eye, Send, Save, Server, Lock } from "lucide-react";
+import { Building2, Mail, Key, Eye, EyeOff, Send, Save, Server, Lock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { settingsApi, SystemSettings } from "@/api/settings";
 
@@ -19,6 +19,9 @@ export default function GeneralSettingsView() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [isTestingSmtp, setIsTestingSmtp] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -49,6 +52,33 @@ export default function GeneralSettingsView() {
       alert("Failed to save settings.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    if (!formData.smtpHost || !formData.smtpUsername || !formData.smtpPassword) {
+      setSmtpTestResult({
+        success: false,
+        message: "Please provide SMTP Host, Username, and Password before testing the connection.",
+      });
+      return;
+    }
+    try {
+      setIsTestingSmtp(true);
+      setSmtpTestResult(null);
+      const res = await settingsApi.testSmtpConnection(formData);
+      setSmtpTestResult({
+        success: true,
+        message: res.data?.message || "SMTP connection verified successfully! Mail server is reachable and credentials are valid.",
+      });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Failed to verify SMTP connection. Please check your credentials and server host.";
+      setSmtpTestResult({
+        success: false,
+        message: msg,
+      });
+    } finally {
+      setIsTestingSmtp(false);
     }
   };
 
@@ -158,14 +188,19 @@ export default function GeneralSettingsView() {
                 <label className="block text-[11px] font-bold text-gray-700 mb-1.5">SMTP Password / Key</label>
                 <div className="relative">
                   <input 
-                    type="password" 
+                    type={showSmtpPassword ? "text" : "password"} 
                     name="smtpPassword"
                     value={formData.smtpPassword || ""} 
                     onChange={handleChange}
-                    className="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold tracking-wider text-sm text-gray-900 transition-all" 
+                    className="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm text-gray-900 transition-all" 
                   />
-                  <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                    <Eye className="w-4 h-4" />
+                  <button 
+                    type="button"
+                    onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                    title={showSmtpPassword ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  >
+                    {showSmtpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -193,14 +228,47 @@ export default function GeneralSettingsView() {
                 />
               </div>
             </div>
+
+            {/* Test Result Alert */}
+            {smtpTestResult && (
+              <div className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${
+                smtpTestResult.success 
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                  : "bg-red-50 border-red-200 text-red-800"
+              }`}>
+                {smtpTestResult.success ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold">{smtpTestResult.success ? "Connection Verified" : "Connection Failed"}</p>
+                  <p className="text-xs mt-0.5 text-gray-600">{smtpTestResult.message}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer Actions */}
         <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl font-bold text-xs transition-colors shadow-sm">
-            <Send className="w-3.5 h-3.5" />
-            Test SMTP Connection
+          <button 
+            type="button"
+            onClick={handleTestSmtp}
+            disabled={isTestingSmtp}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-60 text-gray-700 rounded-xl font-bold text-xs transition-colors shadow-sm"
+          >
+            {isTestingSmtp ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                Testing Connection...
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                Test SMTP Connection
+              </>
+            )}
           </button>
           <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-colors shadow-sm">
             <Save className="w-4 h-4" />
