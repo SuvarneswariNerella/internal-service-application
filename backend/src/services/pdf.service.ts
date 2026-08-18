@@ -143,7 +143,7 @@ export const generateFinancePdf = async (
                   <td class="py-4 text-center text-sm">${item.qty}</td>
                   <td class="py-4 text-right text-sm">${Number(item.rate).toLocaleString()}</td>
                   <td class="py-4 text-center text-sm">${item.gst || 18}%</td>
-                  <td class="py-4 text-right text-sm font-bold">${((item.qty * item.rate) * (1 + (item.gst || 18) / 100)).toLocaleString()}</td>
+                  <td class="py-4 text-right text-sm font-bold">${Number(item.qty * item.rate).toLocaleString()}</td>
                 </tr>
               `).join('')}
             </tbody>

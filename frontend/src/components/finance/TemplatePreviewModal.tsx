@@ -30,10 +30,9 @@ export default function TemplatePreviewModal({ isOpen, onClose, template, worksp
   const workspaceName = workspace?.displayName || "Workspace Name Not Set";
   
   // Calculate Totals
-  const baseTotal = items.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.rate || 0)), 0);
+  const subtotal = items.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.rate || 0)), 0);
   const taxPercentage = 18;
-  const subtotal = items.reduce((acc: number, item: any) => acc + (((item.quantity || 0) * (item.rate || 0)) * (1 + taxPercentage / 100)), 0);
-  const taxAmount = (baseTotal * taxPercentage) / 100;
+  const taxAmount = (subtotal * taxPercentage) / 100;
   const total = subtotal + taxAmount;
   
   // Dummy state for preview

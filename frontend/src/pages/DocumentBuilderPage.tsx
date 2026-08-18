@@ -241,8 +241,8 @@ export default function DocumentBuilderPage() {
   }, [templateId, setValue]);
 
   // Calculate totals
-  const taxAmount = formData.items.reduce((acc, item) => acc + (item.price * item.qty * ((item.gst || 0) / 100)), 0);
-  const subtotal = formData.items.reduce((acc, item) => acc + (item.price * item.qty * (1 + (item.gst || 0) / 100)), 0);
+  const subtotal = formData.items.reduce((acc, item) => acc + (Number(item.price || 0) * Number(item.qty || 0)), 0);
+  const taxAmount = formData.items.reduce((acc, item) => acc + (Number(item.price || 0) * Number(item.qty || 0) * ((Number(item.gst) || 0) / 100)), 0);
   const total = subtotal + taxAmount;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -439,7 +439,7 @@ export default function DocumentBuilderPage() {
             <td style="text-align: center;">₹${Number(item.price).toFixed(2)}</td>
             <td style="text-align: center;">${item.qty}</td>
             <td style="text-align: center;">${item.gst || 0}%</td>
-            <td style="text-align: center;">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
+            <td style="text-align: center;">₹${(Number(item.price) * Number(item.qty)).toFixed(2)}</td>
           `;
         } else if (activeDesign === "executive") {
           tr.innerHTML = `
@@ -449,7 +449,7 @@ export default function DocumentBuilderPage() {
             <td style="text-align: center; font-weight: 600; padding: 12px 10px;">₹${Number(item.price).toFixed(2)}</td>
             <td style="text-align: center; padding: 12px 10px;">${item.qty}</td>
             <td style="text-align: center; padding: 12px 10px;">${item.gst || 0}%</td>
-            <td style="text-align: right; font-weight: 700; color: #2B1810; padding: 12px 10px;">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 700; color: #2B1810; padding: 12px 10px;">₹${(Number(item.price) * Number(item.qty)).toFixed(2)}</td>
           `;
         } else {
           tr.innerHTML = `
@@ -459,7 +459,7 @@ export default function DocumentBuilderPage() {
             <td class="tm_width_2">₹${Number(item.price).toFixed(2)}</td>
             <td class="tm_width_1">${item.qty}</td>
             <td class="tm_width_1">${item.gst || 0}%</td>
-            <td class="tm_width_2 tm_text_right">₹${((Number(item.price) * Number(item.qty)) * (1 + (item.gst || 0) / 100)).toFixed(2)}</td>
+            <td class="tm_width_2 tm_text_right">₹${(Number(item.price) * Number(item.qty)).toFixed(2)}</td>
           `;
         }
         
