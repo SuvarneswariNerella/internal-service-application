@@ -171,8 +171,7 @@ export default function DocumentBuilderPage() {
         const paddedSeq = String(seq).padStart(3, '0');
         setValue("invoiceNo", `${prefix}-${paddedSeq}`);
       }
-    }
-  }, [globalWorkspaceId, workspaces, setValue, type]);
+  }, [globalWorkspaceId, workspaces, activeWorkspace, setValue, type, formData.logoBase64]);
 
   useEffect(() => {
     const fetchClients = async () => {
