@@ -4,8 +4,8 @@ import { createError } from "@/middleware/errorHandler";
 import { logAudit } from "@/utils/audit";
 
 export async function listDomains(req: Request, res: Response): Promise<void> {
-  const page = parseInt(String(req.query.page) || "1");
-  const pageSize = parseInt(String(req.query.pageSize) || "10");
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
+  const pageSize = Math.max(1, Math.min(1000, parseInt(String(req.query.pageSize || "10"), 10) || 10));
   const search = String(req.query.search || "");
   const clientId = String(req.query.clientId || "");
   const projectId = String(req.query.projectId || "");

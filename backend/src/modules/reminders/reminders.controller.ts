@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import prisma from "@/config/db";
 
 export async function listNotifications(req: Request, res: Response): Promise<void> {
-  const page = parseInt(String(req.query.page) || "1");
-  const pageSize = parseInt(String(req.query.pageSize) || "20");
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
+  const pageSize = Math.max(1, Math.min(1000, parseInt(String(req.query.pageSize || "20"), 10) || 20));
   const unreadOnly = req.query.unread === "true";
 
   const where: Record<string, unknown> = {};

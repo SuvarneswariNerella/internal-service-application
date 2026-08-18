@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import prisma from "@/config/db";
 
 export async function listAuditLogs(req: Request, res: Response): Promise<void> {
-  const page = parseInt(String(req.query.page) || "1");
-  const pageSize = parseInt(String(req.query.pageSize) || "20");
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
+  const pageSize = Math.max(1, Math.min(1000, parseInt(String(req.query.pageSize || "20"), 10) || 20));
   const action = String(req.query.action || "");
   const entity = String(req.query.entity || "");
   const userId = String(req.query.userId || "");
@@ -32,8 +32,8 @@ export async function listAuditLogs(req: Request, res: Response): Promise<void> 
 }
 
 export async function listLoginLogs(req: Request, res: Response): Promise<void> {
-  const page = parseInt(String(req.query.page) || "1");
-  const pageSize = parseInt(String(req.query.pageSize) || "20");
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
+  const pageSize = Math.max(1, Math.min(1000, parseInt(String(req.query.pageSize || "20"), 10) || 20));
   const userId = String(req.query.userId || "");
   const success = req.query.success;
 
