@@ -82,7 +82,14 @@ export default function WorkspaceSwitcher() {
                 <Building2 className="w-4 h-4 text-indigo-600" />
                 Company Workspaces
               </div>
-              <button className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors">
+              <button 
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/settings?tab=workspaces");
+                }}
+                title="Manage Workspaces"
+                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors"
+              >
                 <Settings className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -170,7 +177,7 @@ export default function WorkspaceSwitcher() {
 
           {/* Footer Action */}
           <div className="p-3 border-t border-gray-100 bg-white flex-shrink-0">
-            <button onClick={() => { setIsOpen(false); navigate("/settings"); }} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition-colors">
+            <button onClick={() => { setIsOpen(false); navigate("/settings?tab=workspaces"); }} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition-colors">
               <Plus className="w-3.5 h-3.5" />
               Manage / Add Workspace
             </button>

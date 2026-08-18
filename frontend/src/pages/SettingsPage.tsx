@@ -1,5 +1,6 @@
 import { Building2, ChevronRight, Shield, User, Plus, SlidersHorizontal, Settings2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import AddWorkspaceModal from "@/components/AddWorkspaceModal";
 import GeneralSettingsView from "@/components/settings/GeneralSettingsView";
 import SecuritySettingsView from "@/components/settings/SecuritySettingsView";
@@ -8,9 +9,14 @@ import { workspacesApi } from "@/api/workspaces";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export default function SettingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab') as 'workspaces' | 'general' | 'security' | null;
+
   const [isAddWorkspaceModalOpen, setIsAddWorkspaceModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'general' | 'security'>('workspaces');
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'general' | 'security'>(
+    tabFromUrl && ['workspaces', 'general', 'security'].includes(tabFromUrl) ? tabFromUrl : 'workspaces'
+  );
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
@@ -20,6 +26,17 @@ export default function SettingsPage() {
   const setSelectedWorkspaceId = (id: string | null) => setGlobalWorkspaceId(id || "all");
 
   const displayedWorkspaces = selectedWorkspaceId ? workspaces.filter(w => w.id === selectedWorkspaceId) : workspaces;
+
+  useEffect(() => {
+    if (tabFromUrl && ['workspaces', 'general', 'security'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const handleTabChange = (tab: 'workspaces' | 'general' | 'security') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
 
   useEffect(() => {
@@ -70,7 +87,7 @@ export default function SettingsPage() {
             </div>
             <div className="p-2 space-y-1">
               <button 
-                onClick={() => setActiveTab('workspaces')}
+                onClick={() => handleTabChange('workspaces')}
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl transition-all border",
                   activeTab === 'workspaces' 
@@ -86,7 +103,7 @@ export default function SettingsPage() {
               </button>
 
               <button 
-                onClick={() => setActiveTab('general')}
+                onClick={() => handleTabChange('general')}
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl transition-all border",
                   activeTab === 'general' 
@@ -102,7 +119,7 @@ export default function SettingsPage() {
               </button>
 
               <button 
-                onClick={() => setActiveTab('security')}
+                onClick={() => handleTabChange('security')}
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl transition-all border",
                   activeTab === 'security' 
