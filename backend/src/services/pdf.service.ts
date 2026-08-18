@@ -54,7 +54,13 @@ export const generateFinancePdf = async (
 
   let html = "";
 
-  if (metadata.customHtml) {
+  if (metadata.generatedHtml) {
+    let finalHtml = metadata.generatedHtml;
+    if (effectiveLogo) {
+      finalHtml = finalHtml.replace(/https:\/\/placehold\.co\/200x50\/000000\/FFFFFF\/png\?text=LOGO/g, effectiveLogo);
+    }
+    html = finalHtml;
+  } else if (metadata.customHtml) {
     let processedHtml = metadata.customHtml;
     Object.keys(previewData).forEach(key => {
       const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
@@ -178,7 +184,7 @@ export const generateFinancePdf = async (
 
   const browserOptions: any = {
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
   };
 
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
@@ -191,11 +197,12 @@ export const generateFinancePdf = async (
   const browser = await puppeteer.launch(browserOptions);
   const page = await browser.newPage();
   
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  await page.setContent(html, { waitUntil: ['load', 'networkidle0'] });
   const pdfBuffer = await page.pdf({
     format: 'A4',
     printBackground: true,
-    margin: { top: '40px', bottom: '40px', left: '20px', right: '20px' }
+    preferCSSPageSize: true,
+    margin: metadata.generatedHtml ? { top: '0px', bottom: '0px', left: '0px', right: '0px' } : { top: '30px', bottom: '30px', left: '20px', right: '20px' }
   });
 
   await browser.close();
