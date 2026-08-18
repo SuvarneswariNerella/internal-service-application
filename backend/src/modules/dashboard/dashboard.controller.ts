@@ -114,7 +114,7 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
     }),
     prisma.emailLog.findMany({
       where: workspaceId ? { workspaceId } : undefined,
-      orderBy: { createdAt: "desc" },
+      orderBy: { sentAt: "desc" },
       take: 6,
     }),
     prisma.client.findMany({
@@ -177,7 +177,7 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
       type: "EMAIL",
       title: `Email: ${e.subject}`,
       message: `Delivered to ${e.recipient}`,
-      createdAt: e.createdAt,
+      createdAt: e.sentAt,
     });
   }
 
